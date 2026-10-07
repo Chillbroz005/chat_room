@@ -12,7 +12,7 @@
 </head>
 <body>
 <div class="shell">
-  <header><div class="brand"><span class="mark">✳</span>gather</div><div class="top-actions"><span class="status" id="connection">Connect Firebase to start rooms</span><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
+  <header><div class="brand"><span class="mark">✳</span>gather</div><div class="top-actions"><span class="status" id="connection">Connecting…</span><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
   <section class="view active" id="home-view">
     <div class="hero"><span class="eyebrow">GOOD THINGS HAPPEN TOGETHER</span><h1>Make room for <span>everyone.</span></h1><p>Bring your people together in a shared space. Start a room or hop into one with a password.</p></div>
     <div class="cards">
@@ -24,12 +24,11 @@
         <button class="btn full" id="create-room">Create room</button><div class="note" id="create-note" aria-live="polite"></div>
       </article>
       <article class="card"><div class="card-top"><div class="icon join">↗</div><span class="step">02 / GUEST</span></div><h2>Join a room</h2><p class="desc">Find an active room. A password is needed only if the host set one.</p>
-        <label class="label" for="guest-name">YOUR NAME</label><input class="input" id="guest-name" maxlength="24" placeholder="Leave blank for a random name">
         <label class="label" for="room-search">ROOM CODE (OPTIONAL)</label><div class="row"><input class="input" id="room-search" maxlength="6" placeholder="Search by code"><button class="btn secondary" id="refresh-rooms">Refresh</button></div>
         <div class="note" id="join-note" aria-live="polite"></div>
       </article>
     </div>
-    <div class="rooms-wrap"><div class="section-title"><h2>Open rooms</h2><span class="status">Active rooms you can join</span></div><div class="room-list" id="room-list"><div class="empty">Connect Firebase to load active rooms.</div></div></div>
+    <div class="rooms-wrap"><div class="section-title"><h2>Open rooms</h2><span class="status">Active rooms you can join</span></div><div class="room-list" id="room-list"><div class="empty">Loading active rooms…</div></div></div>
   </section>
   <section class="view" id="room-view">
     <div class="room-head"><div class="room-heading"><h1 id="room-title">Room</h1><p id="room-subtitle"></p></div><div class="top-actions"><span class="status" id="room-code-label"></span><button class="btn secondary small" id="copy-invite">Copy invite</button><button class="btn danger small" id="leave-room">Leave room</button></div></div>
@@ -39,7 +38,7 @@
   </section>
   <footer class="footer"><span>© 2026 gather · Rooms expire automatically</span><span>Private spaces for getting together</span></footer>
 </div>
-<div class="modal-backdrop" id="password-modal"><div class="modal"><h2 id="join-modal-title">Join room</h2><p id="password-room-info"></p><label class="label" id="password-label" for="password-entry">PASSWORD</label><input class="input" id="password-entry" type="password" autocomplete="current-password"><div class="note" id="password-note"></div><div class="modal-actions"><button class="btn secondary" id="cancel-join">Cancel</button><button class="btn" id="confirm-join">Join room</button></div></div></div>
+<div class="modal-backdrop" id="password-modal"><div class="modal"><h2 id="join-modal-title">Join room</h2><p id="password-room-info"></p><label class="label" id="password-label" for="password-entry">ROOM PASSWORD</label><input class="input" id="password-entry" type="password" autocomplete="current-password"><label class="label" for="guest-name">YOUR NAME</label><input class="input" id="guest-name" maxlength="24" placeholder="Leave blank for a random name"><label class="label" for="admin-password">ADMIN PASSWORD (OPTIONAL)</label><input class="input" id="admin-password" type="password" placeholder="Only if the host made you an admin"><div class="note" id="password-note"></div><div class="modal-actions"><button class="btn secondary" id="cancel-join">Cancel</button><button class="btn" id="confirm-join">Join room</button></div></div></div>
 <div class="loading" id="loading">Working…</div>
 <script type="module" src="./app.js"></script>
 </body>

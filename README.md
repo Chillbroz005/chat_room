@@ -1,55 +1,41 @@
-# Gather
+# Gather chat rooms
 
-A GitHub Pages chat-room front end backed by Firebase Authentication, Cloud Firestore, and callable Cloud Functions.
+Gather is a static website with its API hosted by Cloudflare Pages Functions and room data stored in Cloudflare D1. The app polls for chat updates every 10 seconds. It does not use Firebase or require a paid server plan.
 
 ## Features
 
-- Create rooms with a custom or generated room name, a custom or generated display name, an optional password, and an expiry from 1 minute to 30 days.
-- Browse active rooms and see the room code, creator, creation time, expiry, description, and member count before joining.
-- Join with a room password when the host sets one. Passwords are salted and hashed on the server. Five wrong attempts lock that account out of the room for 15 minutes.
-- Live text and emoji chat, GIF links, a 255-character text/caption limit, and admin-only message deletion.
-- Join/leave notices, live member presence, room rules and settings, password changes, admin nomination, user blocking, and an admin activity log.
-- Expired rooms immediately stop working and are recursively removed by a scheduled Cloud Function.
+- Create a room with a generated or custom name and optional password.
+- Browse rooms and see the host, creation date, expiry, description, and member count.
+- Set room lifetime from one minute to 30 days.
+- Chat with text, emoji, and HTTPS GIF links. Text and captions are limited to 255 characters.
+- Admins can delete messages, change room details/password/expiry, block members, nominate another admin, and view the activity log.
+- Join and leave events appear in chat. Expired rooms are removed as requests reach the API.
 
-## Firebase setup (one time)
+## Deploy to Cloudflare Pages (free plan)
 
-1. Create a Firebase project and a Web app. In **Authentication → Sign-in method**, enable **Anonymous** sign-in.
-2. Create a **Cloud Firestore** database. Copy the Web app config into `firebase-config.js`.
-3. Install the Firebase CLI, sign in, and select the project from this folder:
+1. Sign in to Cloudflare and open **Workers & Pages**. Choose **Create application → Pages → Connect to Git** and select `Chillbroz005/chat_room`.
+2. Set the build command to blank (or `exit 0`) and the build output directory to `.`. Deploy the project. Pages Functions are in the repository's `functions/` folder.
+3. In Cloudflare, open **Workers & Pages → D1 SQL Database → Create database**. Name it `gather-rooms`.
+4. Open the new database's **Console** and run the full SQL from [`migrations/0001_init.sql`](migrations/0001_init.sql).
+5. Open the Pages project **Settings → Functions → D1 database bindings → Add binding**. Set the variable name to exactly `DB` and select `gather-rooms`. Save, then trigger a new deployment so the Functions receive the binding.
+6. Open the `*.pages.dev` URL shown on the Pages project. Create a room and test joining from another browser/device.
 
-   ```powershell
-   npm install -g firebase-tools
-   firebase login
-   firebase use --add
-   ```
-
-4. Deploy the server functions and Firestore rules:
-
-   ```powershell
-   cd functions
-   npm install
-   cd ..
-   firebase deploy --only functions,firestore:rules
-   ```
-
-   Cloud Functions and the scheduled expiry cleanup require a Firebase project on the **Blaze** plan. Set a billing budget alert in Google Cloud before enabling them. The cleanup function runs daily; Firestore rules deny access as soon as a room's expiry time passes.
-
-5. In Firebase Authentication settings, add the GitHub Pages host (`CHILLBROZ005.github.io`) to **Authorized domains**.
-6. Push this repository to GitHub. The included Pages workflow publishes the static files from the repository root. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**.
+If you see “D1 binding DB is missing”, the binding was not saved under the exact name `DB`, or the project needs a new deployment after saving it.
 
 ## Local preview
 
-Because the app uses browser ES modules, open it through a local web server rather than `file://`:
+The static page can be previewed with:
 
 ```powershell
 python -m http.server 8000
 ```
 
-Then visit `http://localhost:8000`.
+The API needs Cloudflare Pages Functions and a D1 database, so room creation will not work from this basic static server. For local full-stack development, use Wrangler Pages dev after installing Wrangler and configuring a local D1 database.
 
 ## Notes
 
-- The Firebase web config is public by design; Firestore rules and server functions enforce access. Never put service-account credentials in this repository.
-- Anonymous accounts are browser based. Clearing browser data or switching devices creates a different identity, so a blocked person could return with a new anonymous account. Use a real sign-in provider if stronger identity-based blocking is needed.
-- GIFs are shared as HTTPS image URLs. The interface does not include a third-party GIF search service or API key.
-- The activity log records room events and admin actions; it does not retain copies of message text after deletion.
+- Cloudflare's free plan has daily request and D1 usage quotas. A ten-second poll uses about 8,640 API requests per continuously active browser per day, plus normal room actions. If the site gets busy, increase the polling interval or review Cloudflare's current limits.
+- A room password is stored as a salted PBKDF2 hash. The admin password is a randomly generated bearer key whose hash is stored in D1. Keep admin passwords private.
+- Browser visitor identities are stored in local storage. Clearing browser storage or switching devices creates a new identity, so blocking is not a strong identity check.
+- GIFs are direct HTTPS links. The app does not connect to a GIF search provider.
+- Messages cannot be deleted by their author. A room admin can delete messages, and deleted message contents are not recorded in the activity log.
