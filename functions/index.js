@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
+const { logger } = require('firebase-functions');
 const crypto = require('node:crypto');
 
 initializeApp();
@@ -19,24 +20,24 @@ async function adminMember(id, uid) { const roomRef=db.collection('rooms').doc(i
 
 exports.createRoom = onCall(async request => {
   const uid=requireAuth(request), data=request.data||{};
-  const password=data.password;
-  if(typeof password!=='string'||password.length<4||password.length>64)throw new HttpsError('invalid-argument','Password must be 4 to 64 characters.');
+  const password=typeof data.password==='string'?data.password:'';
+  if(password.length>64||(password.length>0&&password.length<4))throw new HttpsError('invalid-argument','A room password must be 4 to 64 characters, or left blank.');
   const minutes=validExpiry(data.expiresMinutes), now=Date.now(), expiresAt=Timestamp.fromMillis(now+minutes*60000);
   const creatorName=clean(data.creatorName,24)||'Sunny Fox', name=clean(data.name,48)||`${creatorName.split(' ')[0]}'s room`, description=clean(data.description,180);
-  const salt=crypto.randomBytes(16).toString('hex'), hash=hashPassword(password,salt);
+  const hasPassword=password.length>0, salt=hasPassword?crypto.randomBytes(16).toString('hex'):null, hash=hasPassword?hashPassword(password,salt):null;
   for(let attempt=0;attempt<5;attempt++){
     const id=makeId(), roomRef=db.collection('rooms').doc(id);
     try{
       await db.runTransaction(async tx=>{
         const existing=await tx.get(roomRef);if(existing.exists)throw new HttpsError('aborted','Try again.');
-        tx.create(roomRef,{name,creatorName,creatorUid:uid,createdAt:Timestamp.fromMillis(now),expiresAt,description,rules:'',memberCount:1});
-        tx.create(db.collection('roomSecrets').doc(id),{salt,hash,updatedAt:FieldValue.serverTimestamp()});
+        tx.create(roomRef,{name,creatorName,creatorUid:uid,createdAt:Timestamp.fromMillis(now),expiresAt,description,rules:'',hasPassword,memberCount:1});
+        if(hasPassword)tx.create(db.collection('roomSecrets').doc(id),{salt,hash,updatedAt:FieldValue.serverTimestamp()});
         tx.create(roomRef.collection('members').doc(uid),{displayName:creatorName,role:'admin',joinedAt:Timestamp.fromMillis(now),online:true,lastSeen:Timestamp.fromMillis(now)});
         tx.create(roomRef.collection('activity').doc(),{text:`${creatorName} created this room.`,createdAt:Timestamp.fromMillis(now)});
         tx.create(roomRef.collection('messages').doc(),{kind:'event',text:`${creatorName} created the room.`,senderUid:'system',displayName:'Gather',createdAt:Timestamp.fromMillis(now)});
       });
-      return {roomId:id,name,creatorName,createdAt:Timestamp.fromMillis(now),expiresAt,description,role:'admin'};
-    }catch(e){if(e.code!=='aborted'||attempt===4)throw e;}
+      return {roomId:id,name,creatorName,createdAt:now,expiresAt:expiresAt.toMillis(),description,hasPassword,role:'admin'};
+    }catch(e){if(e.code==='aborted'&&attempt<4)continue;logger.error('createRoom failed',{uid,error:e});if(e instanceof HttpsError)throw e;throw new HttpsError('internal','Room creation failed on the server. Check Firebase Console → Functions → Logs.',{cause:e.message});}
   }
   throw new HttpsError('internal','Could not create a room. Try again.');
 });
@@ -46,7 +47,7 @@ exports.createRoom = onCall(async request => {
 exports.listRooms = onCall(async request => {
   requireAuth(request);
   const result=await db.collection('rooms').where('expiresAt','>',Timestamp.now()).limit(100).get();
-  const rooms=result.docs.map(doc=>{const r=doc.data();return {id:doc.id,name:r.name,creatorName:r.creatorName,createdAt:r.createdAt.toMillis(),expiresAt:r.expiresAt.toMillis(),description:r.description||'',memberCount:r.memberCount||0};}).sort((a,b)=>b.createdAt-a.createdAt);
+  const rooms=result.docs.map(doc=>{const r=doc.data();return {id:doc.id,name:r.name,creatorName:r.creatorName,createdAt:r.createdAt.toMillis(),expiresAt:r.expiresAt.toMillis(),description:r.description||'',memberCount:r.memberCount||0,hasPassword:r.hasPassword!==false};}).sort((a,b)=>b.createdAt-a.createdAt);
   return {rooms};
 });
 
@@ -56,13 +57,14 @@ exports.joinRoom = onCall(async request => {
   const [roomSnap,memberSnap,secretSnap,blockedSnap,attemptSnap]=await Promise.all([roomRef.get(),memberRef.get(),secretRef.get(),roomRef.collection('blocked').doc(uid).get(),attemptRef.get()]);
   if(!roomSnap.exists||roomSnap.data().expiresAt.toMillis()<=Date.now())throw new HttpsError('not-found','This room has expired or does not exist.');
   if(blockedSnap.exists)throw new HttpsError('permission-denied','The room admin has blocked this account.');
-  if(attemptSnap.exists&&attemptSnap.data().blockedUntil?.toMillis?.()>Date.now())throw new HttpsError('resource-exhausted','Too many incorrect passwords. Try again in 15 minutes.');
-  if(!secretSnap.exists||!passwordOk(password,secretSnap.data())){
+  const needsPassword=roomSnap.data().hasPassword!==false;
+  if(needsPassword&&attemptSnap.exists&&attemptSnap.data().blockedUntil?.toMillis?.()>Date.now())throw new HttpsError('resource-exhausted','Too many incorrect passwords. Try again in 15 minutes.');
+  if(needsPassword&&(!secretSnap.exists||!passwordOk(password,secretSnap.data()))){
     const now=Date.now(),attempt=attemptSnap.data()||{},sameWindow=attempt.windowStart&&now-attempt.windowStart.toMillis()<15*60*1000,count=sameWindow?attempt.count+1:1;
     await attemptRef.set({count,windowStart:sameWindow?attempt.windowStart:Timestamp.fromMillis(now),blockedUntil:count>=5?Timestamp.fromMillis(now+15*60*1000):null});
     throw new HttpsError('permission-denied','That room password is incorrect.');
   }
-  if(attemptSnap.exists)await attemptRef.delete();
+  if(needsPassword&&attemptSnap.exists)await attemptRef.delete();
   const displayName=clean(request.data.displayName,24)||'Sunny Fox';
   if(memberSnap.exists){await memberRef.update({online:true,lastSeen:FieldValue.serverTimestamp()});return {roomId:id,displayName:memberSnap.data().displayName,role:memberSnap.data().role};}
   await db.runTransaction(async tx=>{
@@ -93,8 +95,10 @@ exports.updateRoom = onCall(async request => {
 
 exports.setRoomPassword = onCall(async request => {
   const uid=requireAuth(request),id=roomId(request.data||{}),password=request.data.password;await adminMember(id,uid);
-  if(typeof password!=='string'||password.length<4||password.length>64)throw new HttpsError('invalid-argument','Password must be 4 to 64 characters.');
-  const salt=crypto.randomBytes(16).toString('hex');await db.collection('roomSecrets').doc(id).set({salt,hash:hashPassword(password,salt),updatedAt:FieldValue.serverTimestamp()});await addActivity(id,'Room password changed.');return {ok:true};
+  if(typeof password!=='string'||password.length>64||(password.length>0&&password.length<4))throw new HttpsError('invalid-argument','Password must be 4 to 64 characters, or blank to remove it.');
+  const roomRef=db.collection('rooms').doc(id),secretRef=db.collection('roomSecrets').doc(id);
+  if(password.length===0){await secretRef.delete();await roomRef.update({hasPassword:false});await addActivity(id,'Room password removed.');return {ok:true,hasPassword:false};}
+  const salt=crypto.randomBytes(16).toString('hex');await secretRef.set({salt,hash:hashPassword(password,salt),updatedAt:FieldValue.serverTimestamp()});await roomRef.update({hasPassword:true});await addActivity(id,'Room password changed.');return {ok:true,hasPassword:true};
 });
 
 exports.blockUser = onCall(async request => {

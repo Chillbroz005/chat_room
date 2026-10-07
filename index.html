@@ -19,11 +19,11 @@
       <article class="card"><div class="card-top"><div class="icon">＋</div><span class="step">01 / HOST</span></div><h2>Create a room</h2><p class="desc">Set up a private space and invite your people.</p>
         <label class="label" for="creator-name">YOUR NAME</label><input class="input" id="creator-name" maxlength="24" placeholder="Leave blank for a random name">
         <label class="label" for="new-room-name">ROOM NAME</label><input class="input" id="new-room-name" maxlength="48" placeholder="Leave blank for a random name">
-        <label class="label" for="new-password">ROOM PASSWORD</label><input class="input" id="new-password" type="password" maxlength="64" placeholder="Choose a password">
+        <label class="label" for="new-password">ROOM PASSWORD (OPTIONAL)</label><input class="input" id="new-password" type="password" maxlength="64" placeholder="Leave blank for no password">
         <div class="row"><div><label class="label" for="new-expiry">DELETE AFTER</label><input class="input" id="new-expiry" type="number" min="1" max="43200" value="43200"><small style="color:var(--muted);font-size:10px">minutes (max 30 days)</small></div><div><label class="label" for="new-description">DESCRIPTION</label><input class="input" id="new-description" maxlength="180" placeholder="Optional"></div></div>
-        <button class="btn full" id="create-room">Create private room</button><div class="note" id="create-note" aria-live="polite"></div>
+        <button class="btn full" id="create-room">Create room</button><div class="note" id="create-note" aria-live="polite"></div>
       </article>
-      <article class="card"><div class="card-top"><div class="icon join">↗</div><span class="step">02 / GUEST</span></div><h2>Join a room</h2><p class="desc">Find an active room, then enter its password to join.</p>
+      <article class="card"><div class="card-top"><div class="icon join">↗</div><span class="step">02 / GUEST</span></div><h2>Join a room</h2><p class="desc">Find an active room. A password is needed only if the host set one.</p>
         <label class="label" for="guest-name">YOUR NAME</label><input class="input" id="guest-name" maxlength="24" placeholder="Leave blank for a random name">
         <label class="label" for="room-search">ROOM CODE (OPTIONAL)</label><div class="row"><input class="input" id="room-search" maxlength="6" placeholder="Search by code"><button class="btn secondary" id="refresh-rooms">Refresh</button></div>
         <div class="note" id="join-note" aria-live="polite"></div>
@@ -39,7 +39,7 @@
   </section>
   <footer class="footer"><span>© 2026 gather · Rooms expire automatically</span><span>Private spaces for getting together</span></footer>
 </div>
-<div class="modal-backdrop" id="password-modal"><div class="modal"><h2>Enter room password</h2><p id="password-room-info"></p><label class="label" for="password-entry">PASSWORD</label><input class="input" id="password-entry" type="password" autocomplete="current-password"><div class="note" id="password-note"></div><div class="modal-actions"><button class="btn secondary" id="cancel-join">Cancel</button><button class="btn" id="confirm-join">Join room</button></div></div></div>
+<div class="modal-backdrop" id="password-modal"><div class="modal"><h2 id="join-modal-title">Join room</h2><p id="password-room-info"></p><label class="label" id="password-label" for="password-entry">PASSWORD</label><input class="input" id="password-entry" type="password" autocomplete="current-password"><div class="note" id="password-note"></div><div class="modal-actions"><button class="btn secondary" id="cancel-join">Cancel</button><button class="btn" id="confirm-join">Join room</button></div></div></div>
 <div class="loading" id="loading">Working…</div>
 <script type="module" src="./app.js"></script>
 </body>

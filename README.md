@@ -4,9 +4,9 @@ A GitHub Pages chat-room front end backed by Firebase Authentication, Cloud Fire
 
 ## Features
 
-- Create rooms with a custom or generated room name, a custom or generated display name, a password, and an expiry from 1 minute to 30 days.
+- Create rooms with a custom or generated room name, a custom or generated display name, an optional password, and an expiry from 1 minute to 30 days.
 - Browse active rooms and see the room code, creator, creation time, expiry, description, and member count before joining.
-- Join with the room password. Passwords are salted and hashed on the server. Five wrong attempts lock that account out of the room for 15 minutes.
+- Join with a room password when the host sets one. Passwords are salted and hashed on the server. Five wrong attempts lock that account out of the room for 15 minutes.
 - Live text and emoji chat, GIF links, a 255-character text/caption limit, and admin-only message deletion.
 - Join/leave notices, live member presence, room rules and settings, password changes, admin nomination, user blocking, and an admin activity log.
 - Expired rooms immediately stop working and are recursively removed by a scheduled Cloud Function.
