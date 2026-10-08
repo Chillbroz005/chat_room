@@ -1,6 +1,6 @@
-# Hushly chat rooms
+# Husky chat rooms
 
-Hushly is a temporary chat website with its API hosted by Cloudflare Pages Functions and room data stored in Cloudflare D1. The app polls for chat updates every 10 seconds. It does not use Firebase.
+Husky is a temporary chat website with its API hosted by Cloudflare Pages Functions and room data stored in Cloudflare D1. The app polls for chat updates every 10 seconds. It does not use Firebase.
 
 ## Features
 
@@ -21,23 +21,45 @@ Hushly is a temporary chat website with its API hosted by Cloudflare Pages Funct
 3. In Cloudflare, open **Workers & Pages → D1 SQL Database → Create database**. Name it `gather-rooms`.
 4. Open the new database's **Console** and run the full SQL from [`migrations/0001_init.sql`](migrations/0001_init.sql).
 5. If you already deployed the earlier deployed version, also run [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql) once. This adds room ownership and mute controls; do not run it more than once.
-6. Open the Pages project **Settings → Bindings → Add → D1 database binding**. Set the variable name to exactly `DB` and select `gather-rooms`.
-7. In Pages **Settings → Variables and Secrets**, add these secrets:
+6. Run [migrations/0003_telegram_replies.sql](migrations/0003_telegram_replies.sql) once to enable Telegram replies and duplicate-update protection.
+7. Open the Pages project **Settings → Bindings → Add → D1 database binding**. Set the variable name to exactly `DB` and select `gather-rooms`.
+8. In Pages **Settings → Variables and Secrets**, add these secrets:
    - `MASTER_ADMIN_CODE` = the private global admin code you choose
    - `GIPHY_API_KEY` = your free GIPHY API key from [GIPHY Developers](https://developers.giphy.com/)
    - `TELEGRAM_BOT_TOKEN` = your bot token from BotFather (keep it secret)
    - `TELEGRAM_CHAT_ID` = the private chat or group where creator alerts should arrive
-8. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device.
+   - `TELEGRAM_CREATOR_USER_ID` = your numeric Telegram user ID; only this account may post replies from Telegram
+   - `TELEGRAM_WEBHOOK_SECRET` = a random secret containing 32+ letters, digits, `_`, or `-`; use the same value when setting the webhook
+9. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device.
 
 Enter the master code in the same optional admin password field when joining a room. Anyone with the master code can read and moderate every active room, change settings, and delete rooms. Keep the code private. The requested six-character code is convenient but weaker than a long random code; rotate it before sharing the site widely.
 
 If you see “D1 binding DB is missing”, the binding was not saved under the exact name `DB`, or the project needs a new deployment after saving it.
 
+## Telegram creator replies
+
+The bot can return your Telegram replies to the room without you joining or knowing its room password. Replies are accepted only from `TELEGRAM_CREATOR_USER_ID` in `TELEGRAM_CHAT_ID`.
+
+1. Open a private chat with your bot and send `/start` so Telegram permits the bot to message you.
+2. Before setting a webhook, get your numeric Telegram user ID from `https://api.telegram.org/bot<TOKEN>/getUpdates` after sending a message to the bot. Put that number in `TELEGRAM_CREATOR_USER_ID`. If a webhook is already configured, check the bot updates using its current webhook/Cloudflare logs instead; `getUpdates` and a webhook cannot be used at the same time.
+3. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_CREATOR_USER_ID`, and `TELEGRAM_WEBHOOK_SECRET` in Cloudflare Pages **Settings → Variables and Secrets**. Prefer your private chat as `TELEGRAM_CHAT_ID` so creator alerts and replies stay private.
+4. Set Telegram's webhook URL to `https://YOUR-PROJECT.pages.dev/api/telegram-webhook`, with `secret_token` set to the same `TELEGRAM_WEBHOOK_SECRET` value and `allowed_updates` set to `message`. From PowerShell, this prompts for the bot token and webhook secret rather than writing either into the command:
+
+   ```powershell
+   $token = Read-Host "Bot token"
+   $secret = Read-Host "Webhook secret"
+   $body = @{ url = "https://YOUR-PROJECT.pages.dev/api/telegram-webhook"; secret_token = $secret; allowed_updates = @("message") } | ConvertTo-Json -Compress
+   Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType "application/json" -Body $body
+   ```
+
+5. In a room, use `@creator`. Reply directly to its Telegram alert, or send `/reply ROOMCODE your message` to the bot. The response is posted as **Husky Creator (Telegram)** and is limited to 255 characters. Replies to expired rooms are rejected.
+
+Telegram documents [`setWebhook`](https://core.telegram.org/bots/api#setwebhook) and its [secret token header](https://core.telegram.org/bots/api#setwebhook).
 ## Mentions and room conduct
 
 - `@creator` forwards the mentioning message and a room invite link to the configured Telegram chat. Alerts are limited to one per room every five minutes.
 - `@admin` creates a visible chat notice and an entry in the room admin activity log.
-- To find your Telegram chat ID, send `/start` to your bot, then call the Bot API `getUpdates` method and read `message.chat.id`. Telegram documents the HTTPS Bot API request format and `sendMessage` method [here](https://core.telegram.org/bots/api). Never put the bot token in this repository or share it in public.
+- To find your Telegram chat ID, send `/start` to your bot, then call the Bot API `getUpdates` method and read `message.from.id` for `TELEGRAM_CREATOR_USER_ID` and `message.chat.id` for `TELEGRAM_CHAT_ID`. Telegram documents the HTTPS Bot API request format and `sendMessage` method [here](https://core.telegram.org/bots/api). Never put the bot token in this repository or share it in public.
 - The chat shows a conduct and privacy notice. It is a user-facing reminder, not a substitute for jurisdiction-specific terms, privacy disclosures, or legal review.
 
 ## Local preview
