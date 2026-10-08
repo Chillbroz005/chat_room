@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   creator_name TEXT NOT NULL,
+  creator_id TEXT NOT NULL,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
   description TEXT NOT NULL DEFAULT '',
@@ -42,6 +43,12 @@ CREATE TABLE IF NOT EXISTS blocked (
   created_at INTEGER NOT NULL,
   PRIMARY KEY(room_id, visitor_id)
 );
+CREATE TABLE IF NOT EXISTS muted (
+  room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  visitor_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(room_id, visitor_id)
+);
 CREATE TABLE IF NOT EXISTS activity (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -56,3 +63,8 @@ CREATE TABLE IF NOT EXISTS join_attempts (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS join_attempt_window ON join_attempts(room_id,visitor_id,created_at);
+CREATE TABLE IF NOT EXISTS master_attempts (
+  visitor_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS master_attempt_window ON master_attempts(visitor_id,created_at);
