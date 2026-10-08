@@ -142,14 +142,24 @@
     .header-disclaimer strong{color:#315b39}
     header .top-actions{justify-content:flex-end}
     .room-stats span:last-child{background:#eaf6ed;color:#347246;box-shadow:inset 0 0 0 1px #d5ead9}
-    .room-table th:nth-child(1){width:11%}.room-table th:nth-child(2){width:19%}.room-table th:nth-child(3){width:11%}.room-table th:nth-child(4){width:15%}.room-table th:nth-child(5){width:20%}.room-table th:nth-child(6){width:8%}.room-table th:nth-child(7){width:16%}
+    .room-table th:nth-child(1){width:9%}.room-table th:nth-child(2){width:12%}.room-table th:nth-child(3){width:18%}.room-table th:nth-child(4){width:11%}.room-table th:nth-child(5){width:14%}.room-table th:nth-child(6){width:18%}.room-table th:nth-child(7){width:7%}.room-table th:nth-child(8){width:11%}
     .room-table td:nth-child(1),.room-table th:nth-child(1){text-align:center}
     .room-table td:nth-child(2){font-weight:700;color:#5849cc;letter-spacing:.3px}
-    .room-table td:nth-child(2) .room-sub{display:block;margin-top:3px;color:var(--muted);font-size:10px;font-weight:500;letter-spacing:0}
-    .room-table td:nth-child(3),.room-table th:nth-child(3),.room-table td:nth-child(6),.room-table th:nth-child(6){text-align:center;white-space:nowrap;overflow-wrap:normal}
-    .room-table td:nth-child(5),.room-table th:nth-child(5){white-space:nowrap;overflow-wrap:normal}
-    .room-table td:nth-child(7){font-size:10px;white-space:nowrap;overflow-wrap:normal}
-    @media(max-width:760px){header{grid-template-columns:1fr auto;gap:8px}.header-disclaimer{grid-column:1/-1;grid-row:2;max-width:none;padding:6px 8px;font-size:9px}.room-table td:nth-child(5){white-space:normal}.room-table td:nth-child(7){white-space:normal}}
+    .room-table td:nth-child(3){font-weight:600}.room-table td:nth-child(2){white-space:nowrap;overflow-wrap:normal}
+    .room-table td:nth-child(4),.room-table th:nth-child(4),.room-table td:nth-child(7),.room-table th:nth-child(7){text-align:center;white-space:nowrap;overflow-wrap:normal}
+    .room-table td:nth-child(6),.room-table th:nth-child(6){white-space:nowrap;overflow-wrap:normal}
+    .room-table td:nth-child(6),.room-table th:nth-child(6),.room-table td:nth-child(8),.room-table th:nth-child(8){text-align:left}
+    .room-table td:nth-child(8){font-size:10px;white-space:nowrap;overflow-wrap:normal}
+    @media(max-width:760px){header{grid-template-columns:1fr auto;gap:8px}.header-disclaimer{grid-column:1/-1;grid-row:2;max-width:none;padding:6px 8px;font-size:9px}.room-table td:nth-child(6){white-space:normal}.room-table td:nth-child(8){white-space:normal}}
+  </style>
+
+
+  <style>
+    .chat-toolbar-actions{display:flex;align-items:center;gap:8px}
+    .chat-toolbar-actions .tool{white-space:nowrap}
+    .emoji-panel-head{display:flex;justify-content:flex-end;padding-top:8px}
+    .room-table td:nth-child(3){overflow-wrap:anywhere}
+    @media(max-width:760px){.chat-toolbar{padding:8px}.chat-toolbar-actions{gap:5px}.chat-toolbar-actions .tool{font-size:11px;padding:6px}.room-table th,.room-table td{padding:7px 3px;font-size:10px}.room-table td:nth-child(6),.room-table td:nth-child(8){white-space:normal}}
   </style>
 
 </head>
@@ -174,7 +184,7 @@
   </section>
   <section class="view" id="room-view">
     <div class="room-head"><div class="room-heading"><h1 id="room-title">Room</h1><p id="room-subtitle"></p><span class="role-badge" id="role-badge">MEMBER</span></div><div class="top-actions"><span class="status" id="room-code-label"></span><button class="btn secondary small" id="copy-invite">Copy invite</button><button class="btn danger small" id="leave-room">Leave room</button></div></div><div class="mention-hint room-mention-hint">Use <b>@creator</b> to alert the site creator on Telegram with an invite link. Use <b>@admin</b> to notify room admins.<span id="mention-status" aria-live="polite"></span></div>
-    <div class="chat-layout" id="chat-layout"><section class="panel chat-panel"><div class="chat-toolbar"><strong>Room chat</strong><button class="btn secondary small" id="chat-size-toggle" aria-pressed="false">Expand chat</button></div><div class="messages" id="messages"></div><div class="muted-notice" id="muted-notice" hidden>You are muted by an admin. You can still read the chat.</div><div class="composer"><div class="compose-row"><input class="input" id="message-input" maxlength="255" placeholder="Write a message… (255 characters)"><button class="btn" id="send-message">Send</button></div><div class="compose-tools"><button class="tool" id="emoji-toggle">☺ Emoji</button><button class="tool" id="gif-button">GIFs & stickers</button><span class="counter" id="message-count">0 / 255</span></div><div id="emoji-panel" hidden><div class="emoji-categories" id="emoji-categories"></div><div class="emoji-tray show" id="emoji-tray"></div></div></div></section>
+    <div class="chat-layout" id="chat-layout"><section class="panel chat-panel"><div class="chat-toolbar"><strong>Room chat</strong><div class="chat-toolbar-actions"><button class="tool" id="alerts-toggle" type="button">Enable alerts</button><button class="btn secondary small" id="chat-size-toggle" aria-pressed="false">Expand chat</button></div></div><div class="messages" id="messages"></div><div class="muted-notice" id="muted-notice" hidden>You are muted by an admin. You can still read the chat.</div><div class="composer"><div class="compose-row"><input class="input" id="message-input" maxlength="255" placeholder="Write a message… (255 characters)"><button class="btn" id="send-message">Send</button></div><div class="compose-tools"><button class="tool" id="emoji-toggle">☺ Emoji</button><button class="tool" id="gif-button">GIFs & stickers</button><span class="counter" id="message-count">0 / 255</span></div><div id="emoji-panel" hidden><div class="emoji-panel-head"><button class="tool" id="emoji-close" type="button">Close emoji</button></div><div class="emoji-categories" id="emoji-categories"></div><div class="emoji-tray show" id="emoji-tray"></div></div></div></section>
       <aside class="panel side"><div><div class="decorum-note"><strong>Keep it respectful.</strong> Don't share passwords or sensitive personal details. Messages can be copied or screenshotted; Hushly is provided as-is and is not responsible for user-posted content.</div><h3>About this room</h3><p id="about-room"></p><div class="members"><h3>People here <span id="member-count"></span></h3><div id="member-list"></div></div></div><div class="settings" id="settings-area"></div></aside>
     </div>
   </section>
