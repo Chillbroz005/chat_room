@@ -10,6 +10,7 @@ Hushly is a temporary chat website with its API hosted by Cloudflare Pages Funct
 - Chat with text, categorized emoji, GIPHY GIFs, and stickers. Text is limited to 255 characters.
 - Room admins can delete messages, edit room details/password/expiry, block or mute members, nominate admins, and view the activity log.
 - Room creators can permanently delete their room. Admin badges are shown in chat.
+- Members can use `@creator` for a Telegram alert with the chat invite, or `@admin` to alert the room admins. Room admins can promote/demote members beside mute and block controls.
 - A master admin code can access all active rooms.
 - Join and leave events appear in chat. Expired rooms are removed as requests reach the API.
 
@@ -24,11 +25,20 @@ Hushly is a temporary chat website with its API hosted by Cloudflare Pages Funct
 7. In Pages **Settings → Variables and Secrets**, add these secrets:
    - `MASTER_ADMIN_CODE` = the private global admin code you choose
    - `GIPHY_API_KEY` = your free GIPHY API key from [GIPHY Developers](https://developers.giphy.com/)
+   - `TELEGRAM_BOT_TOKEN` = your bot token from BotFather (keep it secret)
+   - `TELEGRAM_CHAT_ID` = the private chat or group where creator alerts should arrive
 8. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device.
 
 Enter the master code in the same optional admin password field when joining a room. Anyone with the master code can read and moderate every active room, change settings, and delete rooms. Keep the code private. The requested six-character code is convenient but weaker than a long random code; rotate it before sharing the site widely.
 
 If you see “D1 binding DB is missing”, the binding was not saved under the exact name `DB`, or the project needs a new deployment after saving it.
+
+## Mentions and room conduct
+
+- `@creator` forwards the mentioning message and a room invite link to the configured Telegram chat. Alerts are limited to one per room every five minutes.
+- `@admin` creates a visible chat notice and an entry in the room admin activity log.
+- To find your Telegram chat ID, send `/start` to your bot, then call the Bot API `getUpdates` method and read `message.chat.id`. Telegram documents the HTTPS Bot API request format and `sendMessage` method [here](https://core.telegram.org/bots/api). Never put the bot token in this repository or share it in public.
+- The chat shows a conduct and privacy notice. It is a user-facing reminder, not a substitute for jurisdiction-specific terms, privacy disclosures, or legal review.
 
 ## Local preview
 

@@ -65,6 +65,18 @@
     .footer{justify-content:center;text-align:center;margin-top:12px;padding-top:8px;font-size:12px}
     @media(min-width:1101px) and (min-height:620px){.cards>.card:not(.rooms-wrap){display:flex;flex-direction:column}.join-tips{margin-top:auto}}
   </style>
+
+  <style>
+    .mention-hint{margin-top:8px;color:#777a91;font-size:12px;line-height:1.5}
+    .mention-hint b{color:#5c4fd0}
+    .mention-hint span{display:block;margin-top:4px;color:#3e7955}
+    .mention-tag{display:inline-block;color:#5143c5;background:#e9e5ff;border-radius:5px;padding:0 4px;font-weight:700}
+    .decorum-note{padding:11px;border-radius:10px;background:#f8f6ff;color:#65677c;font-size:13px;line-height:1.5;margin-bottom:14px}
+    .decorum-note strong{color:#5143c5}
+    .member{flex-wrap:wrap;gap:6px;align-items:center}
+    .member-controls{display:flex;flex-wrap:wrap;gap:4px;width:100%;padding:3px 0 5px 8px}
+    .member-controls .tool{font-size:11px;padding:5px 7px}
+  </style>
 </head>
 <body>
 <div class="shell">
@@ -87,8 +99,8 @@
   </section>
   <section class="view" id="room-view">
     <div class="room-head"><div class="room-heading"><h1 id="room-title">Room</h1><p id="room-subtitle"></p><span class="role-badge" id="role-badge">MEMBER</span></div><div class="top-actions"><span class="status" id="room-code-label"></span><button class="btn secondary small" id="copy-invite">Copy invite</button><button class="btn danger small" id="leave-room">Leave room</button></div></div>
-    <div class="chat-layout"><section class="panel chat-panel"><div class="messages" id="messages"></div><div class="muted-notice" id="muted-notice" hidden>You are muted by an admin. You can still read the chat.</div><div class="composer"><div class="compose-row"><input class="input" id="message-input" maxlength="255" placeholder="Write a message… (255 characters)"><button class="btn" id="send-message">Send</button></div><div class="compose-tools"><button class="tool" id="emoji-toggle">☺ Emoji</button><button class="tool" id="gif-button">GIFs & stickers</button><span class="counter" id="message-count">0 / 255</span></div><div id="emoji-panel" hidden><div class="emoji-categories" id="emoji-categories"></div><div class="emoji-tray show" id="emoji-tray"></div></div></div></section>
-      <aside class="panel side"><div><h3>About this room</h3><p id="about-room"></p><div class="members"><h3>People here <span id="member-count"></span></h3><div id="member-list"></div></div></div><div class="settings" id="settings-area"></div></aside>
+    <div class="chat-layout"><section class="panel chat-panel"><div class="messages" id="messages"></div><div class="muted-notice" id="muted-notice" hidden>You are muted by an admin. You can still read the chat.</div><div class="composer"><div class="compose-row"><input class="input" id="message-input" maxlength="255" placeholder="Write a message… (255 characters)"><button class="btn" id="send-message">Send</button></div><div class="compose-tools"><button class="tool" id="emoji-toggle">☺ Emoji</button><button class="tool" id="gif-button">GIFs & stickers</button><span class="counter" id="message-count">0 / 255</span></div><div class="mention-hint">Use <b>@creator</b> to forward your message and a room invite to the site Telegram bot. Use <b>@admin</b> to alert the room admins.<span id="mention-status" aria-live="polite"></span></div><div id="emoji-panel" hidden><div class="emoji-categories" id="emoji-categories"></div><div class="emoji-tray show" id="emoji-tray"></div></div></div></section>
+      <aside class="panel side"><div><div class="decorum-note"><strong>Keep it respectful.</strong> Don't share passwords or sensitive personal details. Messages can be copied or screenshotted; Hushly is provided as-is and is not responsible for user-posted content.</div><h3>About this room</h3><p id="about-room"></p><div class="members"><h3>People here <span id="member-count"></span></h3><div id="member-list"></div></div></div><div class="settings" id="settings-area"></div></aside>
     </div>
   </section>
   <footer class="footer"><span>&#169; 2026 Hushly &middot; Anonymous chats, temporary by design &middot; Created by Chillbroz</span></footer>
