@@ -15,7 +15,7 @@ async function publicRoom(db,id){const r=await db.prepare('SELECT * FROM rooms W
 function trim(v,max){return String(v||'').trim().slice(0,max)}
 export async function onRequest({request,env}){
  if(!env.DB)return fail('Cloudflare D1 binding DB is missing. See README setup.',503);
- const db=env.DB,method=request.method,path=new URL(request.url).pathname.replace(/^\/api\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
+ const db=env.DB.withSession('first-primary'),method=request.method,path=new URL(request.url).pathname.replace(/^\/api\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
  try{
   await db.prepare('DELETE FROM rooms WHERE expires_at<=?').bind(now()).run();
   if(path.length===1&&path[0]==='rooms'&&method==='GET'){
