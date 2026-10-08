@@ -1,6 +1,6 @@
-# Blink chat rooms
+# Hushly chat rooms
 
-Blink is a temporary chat website with its API hosted by Cloudflare Pages Functions and room data stored in Cloudflare D1. The app polls for chat updates every 10 seconds. It does not use Firebase.
+Hushly is a temporary chat website with its API hosted by Cloudflare Pages Functions and room data stored in Cloudflare D1. The app polls for chat updates every 10 seconds. It does not use Firebase.
 
 ## Features
 
@@ -19,7 +19,7 @@ Blink is a temporary chat website with its API hosted by Cloudflare Pages Functi
 2. Set the build command to blank (or `exit 0`) and the build output directory to `.`. Deploy the project. Pages Functions are in the repository's `functions/` folder.
 3. In Cloudflare, open **Workers & Pages → D1 SQL Database → Create database**. Name it `gather-rooms`.
 4. Open the new database's **Console** and run the full SQL from [`migrations/0001_init.sql`](migrations/0001_init.sql).
-5. If you already deployed the earlier Blink version, also run [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql) once. This adds room ownership and mute controls; do not run it more than once.
+5. If you already deployed the earlier deployed version, also run [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql) once. This adds room ownership and mute controls; do not run it more than once.
 6. Open the Pages project **Settings → Bindings → Add → D1 database binding**. Set the variable name to exactly `DB` and select `gather-rooms`.
 7. In Pages **Settings → Variables and Secrets**, add these secrets:
    - `MASTER_ADMIN_CODE` = the private global admin code you choose
