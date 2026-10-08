@@ -26,7 +26,7 @@ Blink is a temporary chat website with its API hosted by Cloudflare Pages Functi
    - `GIPHY_API_KEY` = your free GIPHY API key from [GIPHY Developers](https://developers.giphy.com/)
 8. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device.
 
-Anyone with the master code can read and moderate every active room, change settings, and delete rooms. Keep the code private. The requested six-character code is convenient but weaker than a long random code; rotate it before sharing the site widely.
+Enter the master code in the same optional admin password field when joining a room. Anyone with the master code can read and moderate every active room, change settings, and delete rooms. Keep the code private. The requested six-character code is convenient but weaker than a long random code; rotate it before sharing the site widely.
 
 If you see “D1 binding DB is missing”, the binding was not saved under the exact name `DB`, or the project needs a new deployment after saving it.
 
