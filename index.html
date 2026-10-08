@@ -131,7 +131,7 @@
 
   <style>
     header{display:grid;grid-template-columns:minmax(180px,1fr) minmax(280px,2fr) minmax(180px,1fr);align-items:center;gap:16px}
-    .header-disclaimer{justify-self:center;max-width:560px;text-align:center;padding:8px 12px;border:1px solid #dcebdd;border-radius:12px;background:#f0f8f0;color:#47664b;font-size:12px;line-height:1.4}
+    .header-disclaimer{justify-self:center;max-width:560px;text-align:center;padding:8px 12px;border:1px solid #dcebdd;border-radius:12px;background:#f0f8f0;color:#47664b;font-size:11px;line-height:1.4;white-space:nowrap}
     .header-disclaimer strong{color:#315b39}
     header .top-actions{justify-content:flex-end}
     .room-stats span:last-child{background:#eaf6ed;color:#347246;box-shadow:inset 0 0 0 1px #d5ead9}
@@ -142,13 +142,13 @@
     .room-table td:nth-child(3),.room-table th:nth-child(3),.room-table td:nth-child(6),.room-table th:nth-child(6){text-align:center;white-space:nowrap;overflow-wrap:normal}
     .room-table td:nth-child(5),.room-table th:nth-child(5){white-space:nowrap;overflow-wrap:normal}
     .room-table td:nth-child(7){font-size:10px;white-space:nowrap;overflow-wrap:normal}
-    @media(max-width:760px){header{grid-template-columns:1fr auto;gap:8px}.header-disclaimer{grid-column:1/-1;grid-row:2;max-width:none}.room-table td:nth-child(5){white-space:normal}.room-table td:nth-child(7){white-space:normal}}
+    @media(max-width:760px){header{grid-template-columns:1fr auto;gap:8px}.header-disclaimer{grid-column:1/-1;grid-row:2;max-width:none;padding:6px 8px;font-size:9px}.room-table td:nth-child(5){white-space:normal}.room-table td:nth-child(7){white-space:normal}}
   </style>
 
 </head>
 <body>
 <div class="shell">
-  <header><div class="brand"><span class="mark">✦</span><span>hushly<small class="brand-tag">anonymous chat</small></span></div><div class="header-disclaimer"><strong>Disclaimer:</strong> Users are responsible for what they share. Room creators are not responsible for user posts.</div><div class="top-actions"><span class="status" id="connection">Connecting…</span><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
+  <header><div class="brand"><span class="mark">✦</span><span>hushly<small class="brand-tag">anonymous chat</small></span></div><div class="header-disclaimer"><strong>Disclaimer:</strong> Shared content is the user?s responsibility, not the room creator?s.</div><div class="top-actions"><span class="status" id="connection">Connecting…</span><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
   <section class="view active" id="home-view">
     <div class="cards">
       <article class="card"><div class="card-top"><div class="icon">＋</div><span class="step">01 / CREATE</span></div><h2 class="home-card-title">Create a room</h2><p class="desc">Set up a private space and invite your people.</p>

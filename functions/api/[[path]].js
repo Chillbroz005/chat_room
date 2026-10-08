@@ -16,12 +16,21 @@ async function publicRoom(db,id){const r=await db.prepare('SELECT * FROM rooms W
 function trim(v,max){return String(v||'').trim().slice(0,max)}
 async function sendCreatorTelegram(db,env,request,id,room,displayName,text){
  if(!env.TELEGRAM_BOT_TOKEN||!env.TELEGRAM_CHAT_ID)return 'not_configured';
- const recent=await db.prepare("SELECT COUNT(*) n FROM activity WHERE room_id=? AND text='@creator Telegram alert attempt' AND created_at>?").bind(id,now()-300000).first();
+ const recent=await db.prepare("SELECT COUNT(*) n FROM activity WHERE room_id=? AND text='@creator Telegram alert sent' AND created_at>?").bind(id,now()-300000).first();
  if((recent?.n||0)>0)return 'rate_limited';
- await activity(db,id,'@creator Telegram alert attempt');
  const invite=new URL(request.url);invite.pathname='/';invite.search='';invite.hash='';invite.searchParams.set('room',id);
  const message=`@creator mention in ${room.name} (${id})\nFrom: ${displayName}\nMessage: ${text.slice(0,255)}\nJoin room: ${invite.toString()}`;
- try{const response=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:env.TELEGRAM_CHAT_ID,text:message})}),result=await response.json();return response.ok&&result.ok?'sent':'failed'}catch{return 'failed'}
+ try{
+  const response=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:env.TELEGRAM_CHAT_ID,text:message})});
+  const result=await response.json();
+  if(response.ok&&result.ok){await activity(db,id,'@creator Telegram alert sent');return 'sent'}
+  const reason=String(result?.description||`HTTP ${response.status}`).replace(/[\r\n]+/g,' ').slice(0,140);
+  await activity(db,id,`@creator Telegram alert failed: ${reason}`);
+  return `failed:${reason}`;
+ }catch{
+  await activity(db,id,'@creator Telegram alert failed: network error');
+  return 'failed:network error';
+ }
 }
 export async function onRequest({request,env}){
  if(!env.DB)return fail('Cloudflare D1 binding DB is missing. See README setup.',503);
