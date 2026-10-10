@@ -249,6 +249,20 @@
 
 
 <style>
+  /* R-15: preserve the account icon and active-room heading on mobile. */
+  @media(max-width:760px){
+    body.design-horizon header>.top-actions{gap:6px}
+    body.design-horizon #account-button{display:inline-flex;align-items:center;gap:6px;flex:0 1 auto;width:auto;min-width:44px;max-width:100%;padding:7px 9px;overflow:visible}
+    body.design-horizon #account-avatar{display:inline-flex!important;flex:0 0 24px;width:24px;min-width:24px;height:24px;align-items:center;justify-content:center;visibility:visible!important;opacity:1!important;font-size:20px;line-height:1;overflow:visible}
+    body.design-horizon #account-label{min-width:0;max-width:calc(52vw - 48px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    body.design-horizon #room-view.active .room-head{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:10px;margin-top:18px;width:100%;max-width:100%}
+    body.design-horizon #room-view.active .room-heading{display:block;min-width:0;width:100%;overflow-wrap:anywhere}
+    body.design-horizon #room-view.active #room-title{display:block;max-width:100%;margin:0 0 5px;font-size:clamp(20px,5.5vw,26px);line-height:1.2;overflow-wrap:anywhere}
+    body.design-horizon #room-view.active #room-subtitle{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+    body.design-horizon #room-view.active .room-head>.top-actions{display:flex;grid-column:1;grid-row:2;justify-content:flex-start;align-items:center;flex-wrap:wrap;width:100%;max-width:100%;min-width:0;gap:6px}
+    body.design-horizon #room-view.active .room-head>.top-actions #room-code-label{flex:1 1 100%;min-width:0}
+    body.design-horizon #room-view.active .chat-layout{width:100%;max-width:100%}
+  }
   /* R-14: keep the account name and Home control from colliding on mobile. */
   @media(max-width:760px){
     body.design-horizon header{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;row-gap:8px}
