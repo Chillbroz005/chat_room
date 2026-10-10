@@ -22,4 +22,4 @@ jobs:
         with:
           node-version: 20
       - name: Run security regression tests
-        run: node --test tests/security-regression.test.mjs
+        run: npm run test:security
