@@ -64,6 +64,7 @@ The client polls for chat updates every 10 seconds. The application does not use
    - [`migrations/0007_room_account_ownership.sql`](migrations/0007_room_account_ownership.sql) (account-based room ownership and admin access)
    - [`migrations/0008_account_auth_attempts.sql`](migrations/0008_account_auth_attempts.sql) (signup/login rolling-window limits)
    - [`migrations/0009_api_rate_limits.sql`](migrations/0009_api_rate_limits.sql) (room-creation and message-posting limits)
+   - [`migrations/0010_account_email.sql`](migrations/0010_account_email.sql) (email address for signup and email-based login)
 4. In your Pages project, open **Settings → Bindings**, add a D1 database binding, set its variable name to exactly `DB`, and select `gather-rooms`.
 
 Do not rerun a migration against a database where it has already been applied.
