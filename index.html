@@ -308,7 +308,81 @@
  .settings-panel-inline .settings-modal-head{top:0}
  .composer-picker .media-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
-</style></head>
+</style>
+  <style id="workspace-layout-r12">
+    /* R-12: full-width, fixed-height chat workspace */
+    #room-view.active{min-height:0}
+    #room-view.active .room-head,#room-view.active .room-mention-hint,#room-view.active .chat-layout{
+      width:100%;max-width:none;margin-left:0;margin-right:0
+    }
+    #room-view.active .room-mention-hint{margin-bottom:10px}
+    #room-view.active .chat-layout{
+      position:relative;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;
+      align-items:stretch;height:calc(100dvh - 190px);min-height:360px;max-height:none
+    }
+    #room-view.active .chat-panel,#room-view.active .side{
+      height:100%;min-height:0;max-height:none;align-self:stretch
+    }
+    #room-view.active .chat-panel{display:flex;flex-direction:column;overflow:hidden}
+    #room-view.active .chat-toolbar,#room-view.active .chat-feature-tools,#room-view.active .composer{flex:none}
+    #room-view.active .messages{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+    #room-view.active .side{overflow:auto;min-width:0}
+    #room-view.active #room-settings-modal.settings-panel-inline{
+      position:absolute;z-index:8;top:0;right:0;bottom:0;width:340px;max-width:100%;
+      height:100%;margin:0;padding:0;border:1px solid var(--line);border-radius:16px;
+      background:var(--panel,#fff);box-shadow:0 10px 35px #17152b20;overflow:hidden
+    }
+    #room-view.active #room-settings-modal[hidden],#room-view.active .composer-picker[hidden]{display:none!important}
+    #room-view.active #room-settings-modal:not([hidden]){display:block}
+    #room-view.active .settings-modal{width:100%;height:100%;max-height:none;overflow-y:auto;border-radius:0;padding:16px;background:var(--panel,#fff);box-shadow:none}
+    #room-view.active .settings-modal-head{position:sticky;top:-16px;z-index:2;background:var(--panel,#fff);padding:10px 0;margin:0 0 12px}
+    #room-view.active .settings-section{background:var(--panel,#fff)}
+    #room-view.active .composer{position:relative}
+    #room-view.active .composer-picker{
+      position:absolute;z-index:12;left:10px;bottom:calc(100% + 8px);width:min(520px,calc(100% - 20px));
+      height:360px;max-height:min(360px,55dvh);display:flex;flex-direction:column;gap:8px;
+      padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel,#fff);
+      box-shadow:0 12px 36px #17152b25;overflow-y:auto;overscroll-behavior:contain
+    }
+    #room-view.active .picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none}
+    #room-view.active .emoji-categories{flex:none;overflow:visible;flex-wrap:wrap}
+    #room-view.active .emoji-tray{max-height:none;overflow:visible;flex:none}
+    #room-view.active .emoji-tray button{min-width:34px;min-height:34px}
+    #room-view.active .media-search-row{flex:none}
+    #room-view.active .media-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;max-height:none;overflow:visible;flex:none}
+    #room-view.active .media-grid img{height:90px}
+    #room-view.active .media-credit{flex:none}
+    @media(min-width:1101px) and (min-height:620px){
+      #room-view.active .chat-layout{height:calc(100dvh - 190px);min-height:360px}
+    }
+    @media(max-width:1100px){
+      #room-view.active .chat-layout{height:calc(100dvh - 205px);grid-template-columns:minmax(0,1fr) 320px}
+      #room-view.active #room-settings-modal.settings-panel-inline{width:320px}
+    }
+    @media(max-width:760px){
+      #room-view.active .chat-layout{display:flex;flex-direction:column;height:auto;min-height:0;gap:10px}
+      #room-view.active .chat-panel{height:calc(100dvh - 235px);min-height:390px;max-height:760px}
+      #room-view.active .side{height:auto;max-height:40vh}
+      #room-view.active #room-settings-modal.settings-panel-inline{
+        position:fixed;top:auto;left:0;right:0;bottom:0;width:100%;height:min(82dvh,720px);
+        max-width:none;border-radius:18px 18px 0 0;box-shadow:0 -10px 35px #17152b25
+      }
+      #room-view.active .settings-modal{border-radius:18px 18px 0 0;padding:16px}
+      #room-view.active .settings-modal-head{top:-16px}
+      #room-view.active .composer-picker{width:min(520px,calc(100vw - 40px));height:360px;max-height:55dvh}
+      #room-view.active .media-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    }
+    @media(max-width:440px){
+      #room-view.active .chat-panel{height:calc(100dvh - 215px);min-height:360px}
+      #room-view.active .composer-picker{left:0;width:100%}
+    }
+    body.theme-dark #room-view.active #room-settings-modal.settings-panel-inline,
+    body.theme-dark #room-view.active .settings-modal,
+    body.theme-dark #room-view.active .settings-section,
+    body.theme-dark #room-view.active .composer-picker{background:var(--panel,#202033);color:var(--ink)}
+  </style>
+
+</head>
 <body>
 <div class="shell">
   <header><div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" focusable="false"><path d="M8 13.5A7.5 7.5 0 0 1 15.5 6h13A7.5 7.5 0 0 1 36 13.5v8A7.5 7.5 0 0 1 28.5 29H20l-8 6v-7.4a7.5 7.5 0 0 1-4-6.1z" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linejoin="round"/><path d="M17 14c2 2 2 5 0 7m5-10c4 3 4 10 0 13m5-10c2 2 2 5 0 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span>husky<small class="brand-tag">anonymous chat</small></span></div><div class="header-disclaimer"><strong>Disclaimer:</strong> Shared content is the user&#8217;s responsibility, not the room creator&#8217;s.</div><div class="top-actions"><div class="appearance-controls"><button type="button" class="tool" id="theme-toggle" aria-label="Switch to dark mode">☾ Dark</button><select class="input" id="design-select" aria-label="Choose site design"><option value="classic">Classic</option><option value="studio">Studio</option><option value="horizon">Horizon</option></select></div><span class="status" id="connection" hidden>Connecting…</span><button type="button" class="status account-status" id="account-button" aria-label="Account settings"><span id="account-avatar">👤</span><span id="account-label">Connecting…</span></button><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
@@ -338,7 +412,8 @@
   <section class="view" id="room-view">
     <div class="room-head"><div class="room-heading"><h1 id="room-title">Room</h1><p id="room-subtitle"></p><span class="role-badge" id="role-badge">MEMBER</span></div><div class="top-actions"><span class="status" id="room-code-label"></span><button class="btn secondary small" id="copy-invite">Copy invite</button><button class="btn secondary small" id="open-room-settings" type="button">Room settings</button><button class="btn danger small" id="leave-room">Leave room</button></div></div><div class="mention-hint room-mention-hint">Use <b>@creator</b> to alert the site creator on Telegram with an invite link. Use <b>@admin</b> to notify room admins.<span id="mention-status" aria-live="polite"></span></div>
     <div class="chat-layout" id="chat-layout"><section class="panel chat-panel"><div class="chat-toolbar"><strong>Room chat</strong><div class="chat-toolbar-actions"><input class="input" id="chat-search" placeholder="Search loaded messages…" aria-label="Search messages" style="max-width:230px;width:min(230px,35vw)"><button class="tool" id="clear-chat-search" type="button">Clear search</button><button class="tool" id="alerts-toggle" type="button">Enable alerts</button><button class="btn secondary small" id="chat-size-toggle" aria-pressed="false">Expand chat</button></div></div><div class="chat-feature-tools" style="display:flex;gap:8px;align-items:center;padding:8px 12px;flex-wrap:wrap"><span id="typing-indicator" aria-live="polite" class="field-hint"></span></div><div class="messages" id="messages"></div><div class="muted-notice" id="muted-notice" hidden>You are muted by an admin. You can still read the chat.</div><div class="composer"><div id="reply-status" class="field-hint" hidden></div><button class="tool" id="reply-cancel" type="button" hidden>Cancel reply</button><div class="compose-row"><input class="input" list="member-mentions" id="message-input" maxlength="255" placeholder="Write a message… (255 characters)"><button class="btn" id="send-message">Send</button></div><datalist id="member-mentions"></datalist><div class="compose-tools"><button class="tool" id="emoji-toggle" type="button">☺ Emoji</button><button class="tool" id="gif-button" type="button">GIFs</button><button class="tool" id="sticker-button" type="button">Stickers</button><span class="counter" id="message-count">0 / 255</span></div><div id="emoji-panel" class="composer-picker" hidden><div class="picker-head"><strong>Choose an emoji</strong><button class="tool" id="emoji-close" type="button">Close</button></div><div class="emoji-categories" id="emoji-categories"></div><div class="emoji-tray show" id="emoji-tray"></div></div><div id="media-panel" class="composer-picker" hidden><div class="picker-head"><strong id="media-title">GIFs</strong><button class="tool" id="close-media" type="button">Close</button></div><div class="row media-search-row"><input class="input" id="media-query" placeholder="Search GIFs" aria-label="Search GIFs"><button class="btn" id="media-search" type="button">Search</button></div><div class="media-grid" id="media-results"></div><div class="media-credit">Powered by GIPHY</div></div></div></section>
-      <aside class="panel side"><div><div class="decorum-note"><strong>Keep it respectful.</strong> Don't share passwords or sensitive personal details. Messages can be copied or screenshotted; Husky is provided as-is and is not responsible for user-posted content.</div><h3>About this room</h3><p id="about-room"></p><div class="members"><h3>People here <span id="member-count"></span></h3><div id="member-list"></div></div></div><div id="room-settings-modal" class="settings-panel-inline" hidden><div class="settings-modal"><div class="settings-modal-head"><div><h2 id="room-settings-title">Room settings</h2><p>Manage this room in one place.</p></div><button class="btn secondary small" id="close-room-settings" type="button">Close</button></div><div id="settings-area"></div></div></div></aside>
+      <aside class="panel side"><div><div class="decorum-note"><strong>Keep it respectful.</strong> Don't share passwords or sensitive personal details. Messages can be copied or screenshotted; Husky is provided as-is and is not responsible for user-posted content.</div><h3>About this room</h3><p id="about-room"></p><div class="members"><h3>People here <span id="member-count"></span></h3><div id="member-list"></div></div></div></aside>
+      <div id="room-settings-modal" class="settings-panel-inline" hidden><div class="settings-modal"><div class="settings-modal-head"><div><h2 id="room-settings-title">Room settings</h2><p>Manage this room in one place.</p></div><button class="btn secondary small" id="close-room-settings" type="button">Close</button></div><div id="settings-area"></div></div></div>
     </div>
   </section>
   <footer class="footer"><span>&#169; 2026 Husky &middot; Anonymous chats, temporary by design &middot; Created by Chillbroz</span></footer>
