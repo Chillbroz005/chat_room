@@ -396,6 +396,81 @@
     body.theme-dark #room-view.active .composer-picker{background:var(--panel,#202033);color:var(--ink)}
   </style>
 
+
+<style id="ui-audit-fixes">
+/* Responsive UI audit fixes */
+:root {
+  --z-chat-expanded: 20;
+  --z-loading: 80;
+  --z-modal: 100;
+}
+@media (min-width: 1101px) and (min-height: 620px) {
+  body { height: auto; min-height: 100dvh; overflow-x: clip; overflow-y: auto; }
+  .shell { height: auto; min-height: 100dvh; }
+  .cards { min-height: auto; }
+}
+.room-table-wrap {
+  max-width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.room-table { min-width: 760px; table-layout: auto; }
+@media (max-width: 480px) {
+  .room-table th, .room-table td { font-size: 12px; padding: 10px 8px; }
+  .room-table .room-join .btn { min-height: 38px; padding: 7px 9px; font-size: 12px; }
+}
+.chat-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+#chat-search { width: 100%; max-width: 100%; min-width: 0; }
+@media (max-width: 480px) {
+  .chat-toolbar-actions > * { min-height: 40px; }
+  .chat-toolbar-actions #chat-search { flex: 1 1 100%; }
+}
+.chat-layout.expanded { z-index: var(--z-chat-expanded); }
+.loading { z-index: var(--z-loading); }
+.modal-backdrop { z-index: var(--z-modal); }
+.modal-backdrop.show { overflow-y: auto; overscroll-behavior: contain; }
+.modal-backdrop .modal { max-height: calc(100dvh - 36px); overflow-y: auto; }
+body:has(.modal-backdrop.show) { overflow: hidden; }
+.master-workspace { min-width: 0; }
+.master-head-actions { flex-wrap: wrap; }
+@media (min-width: 761px) and (max-width: 900px) {
+  .master-workspace { grid-template-columns: 1fr; grid-template-rows: minmax(190px, 32vh) minmax(420px, 1fr); }
+  .master-head { align-items: flex-start; flex-wrap: wrap; }
+}
+.bubble img {
+  width: auto;
+  height: auto;
+  max-width: min(100%, 280px);
+  max-height: 210px;
+  object-fit: contain;
+}
+.media-grid img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; }
+:where(button, a, input, textarea, select, summary):focus-visible {
+  outline: 3px solid #8b7cf6;
+  outline-offset: 2px;
+}
+button:disabled, .btn:disabled, .tool:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  filter: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
