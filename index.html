@@ -257,9 +257,10 @@
     body.design-horizon header>.top-actions{grid-column:1;grid-row:3;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;width:100%;max-width:100%;min-width:0}
     body.design-horizon .top-actions .appearance-controls{order:0;display:flex;flex:0 1 auto;flex-wrap:wrap;justify-content:flex-end;gap:5px;min-width:0;max-width:100%}
     body.design-horizon .top-actions .appearance-controls select{min-width:0;width:auto;max-width:105px}
-    body.design-horizon .account-status{flex:0 1 auto;max-width:min(52vw,220px);min-width:0;padding:7px 8px;overflow:hidden}
-    body.design-horizon #account-button{flex:0 1 auto;min-width:0;max-width:100%}
-    body.design-horizon #account-label{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    body.design-horizon .account-status{display:inline-flex;flex:0 1 auto;align-items:center;gap:6px;max-width:min(52vw,220px);min-width:42px;padding:7px 8px;overflow:hidden}
+    body.design-horizon #account-button{flex:0 1 auto;min-width:42px;max-width:100%;justify-content:flex-start}
+    body.design-horizon #account-avatar{display:inline-flex;flex:0 0 22px;align-items:center;justify-content:center;width:22px;min-width:22px;height:22px;font-size:19px;line-height:1;visibility:visible;opacity:1}
+    body.design-horizon #account-label{display:block;flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     body.design-horizon #home-button{flex:0 0 auto;white-space:nowrap;padding:7px 9px}
     body.design-horizon #room-view.active .room-head .top-actions{max-width:100%;width:100%}
   }
