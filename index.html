@@ -244,6 +244,31 @@
     }
   </style>
 
+
+<style>
+  /* Keep the account label minimal for signed-out visitors. */
+  #account-button:not(.logged-in) #account-avatar{display:none}
+  /* Separate brand and action controls on narrow chat-room headers. */
+  @media(max-width:760px){
+    body.design-horizon header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:8px}
+    body.design-horizon header>.brand{grid-column:1;grid-row:1;min-width:0}
+    body.design-horizon header>.top-actions{grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:5px;min-width:0;max-width:calc(100vw - 150px)}
+    body.design-horizon header>.header-disclaimer{grid-column:1/-1;grid-row:2;order:initial;min-width:0;white-space:normal}
+    body.design-horizon .top-actions .appearance-controls{order:3;flex:1 0 100%;justify-content:flex-end;min-width:0}
+    body.design-horizon .top-actions .appearance-controls select{min-width:80px;max-width:105px}
+    body.design-horizon .account-status{max-width:100px;min-width:0;padding:7px 8px;overflow:hidden}
+    body.design-horizon #account-label{display:block;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+    body.design-horizon #home-button{flex:none;white-space:nowrap;padding:7px 9px}
+    body.design-horizon #room-view.active .room-head .top-actions{max-width:none}
+  }
+  @media(max-width:380px){
+    body.design-horizon header>.top-actions{max-width:calc(100vw - 125px)}
+    body.design-horizon .account-status{max-width:78px}
+    body.design-horizon #account-label{max-width:50px}
+    body.design-horizon .top-actions .appearance-controls .tool{padding:6px;font-size:11px}
+  }
+</style>
+
 </head>
 <body>
 <div class="shell">
