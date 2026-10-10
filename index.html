@@ -505,6 +505,61 @@ button:disabled, .btn:disabled, .tool:disabled {
 }
 </style>
 
+  <style id="chatroom-layout-contrast-fixes">
+    /* Header: keep Guest/account and Home controls visible without overlap. */
+    body:not(.design-horizon) header{display:grid;grid-template-columns:minmax(150px,auto) minmax(180px,1fr) auto;align-items:center;gap:16px}
+    header>.brand{min-width:0}
+    header>.header-disclaimer{width:100%;max-width:560px;min-width:0;justify-self:center;white-space:normal;overflow-wrap:anywhere}
+    header>.top-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;min-width:0}
+    .appearance-controls{flex-wrap:wrap;min-width:0}
+    #account-button.account-status{display:inline-flex;align-items:center;justify-content:flex-start;gap:6px;flex:0 1 auto;min-width:44px;max-width:190px;white-space:normal;color:var(--ink);font-size:12px;line-height:1.25;overflow:visible}
+    #account-avatar{display:inline-flex;flex:0 0 24px;width:24px;min-width:24px;height:24px;align-items:center;justify-content:center;visibility:visible;opacity:1;font-size:19px}
+    #account-label{display:block;min-width:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #home-button[hidden]{display:none!important}
+    #home-button:not([hidden]){display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;visibility:visible;opacity:1;white-space:nowrap;position:relative;z-index:3}
+    /* Legible disclaimer and caution callouts in both themes. */
+    .header-disclaimer{background:#fff4d6!important;border:1px solid #e7bd58!important;color:#65460b!important;border-radius:8px;padding:8px 11px;line-height:1.45}
+    .header-disclaimer strong{color:#543600!important}
+    .decorum-note{background:#fff4d6!important;border:1px solid #e7bd58!important;color:#65460b!important;border-radius:9px;padding:12px}
+    .decorum-note strong{color:#543600!important}
+    body.theme-dark .header-disclaimer,body.theme-dark .decorum-note{background:#3a2d16!important;border-color:#a77b2b!important;color:#ffe5a6!important}
+    body.theme-dark .header-disclaimer strong,body.theme-dark .decorum-note strong{color:#fff0c4!important}
+    body.theme-dark.design-studio .card,body.theme-dark.design-studio .panel,body.theme-dark.design-studio .master-browser,body.theme-dark.design-studio .master-detail-pane,body.theme-dark.design-studio .master-stats>div{color:var(--ink);background:#25272b;border-color:#45484f}
+    body.theme-dark.design-studio .label,body.theme-dark.design-studio .settings summary{color:#e0e2e8}
+    body.theme-dark.design-studio .input,body.theme-dark.design-studio .textarea,body.theme-dark.design-studio select{background:#191b20!important;color:#f2f3f5!important;border-color:#55585f}
+    body.theme-dark.design-studio .btn.secondary{background:#3a3d43;color:#fff;border:1px solid #595c63}
+    body.theme-dark.design-studio .room-table th{background:#33302d;color:#f3e8dd}
+    body.theme-dark.design-studio .room-table td{background:#25272b;color:#f0f0f2;border-color:#45484f}
+    body.theme-dark.design-studio .tool,body.theme-dark.design-studio .emoji-categories button{background:#303238;color:#f2f3f5;border-color:#55585f}
+    body.theme-dark.design-studio .composer-picker,body.theme-dark.design-studio .picker-head{background:#25272b;color:#f2f3f5;border-color:#55585f}
+    body.theme-dark.design-studio .note{background:#34303f;color:#f0eaff}
+    /* Keep emoji/media picker and its close control above chat content. */
+    #room-view.active .composer-picker{z-index:60;isolation:isolate}
+    #room-view.active .picker-head{position:sticky;top:-12px;z-index:5;min-height:38px;padding:6px 0 10px}
+    #room-view.active .picker-head .tool{position:relative;z-index:6;flex:0 0 auto;min-height:34px;padding:7px 12px}
+    #room-view.active .emoji-tray{overflow:auto;min-height:0}
+    @media(max-width:900px){
+      body:not(.design-horizon) header{grid-template-columns:minmax(0,1fr) auto;gap:10px}
+      body:not(.design-horizon) header>.brand{grid-column:1;grid-row:1}
+      body:not(.design-horizon) header>.top-actions{grid-column:1/-1;grid-row:2;justify-content:flex-start}
+      body:not(.design-horizon) header>.header-disclaimer{grid-column:1/-1;grid-row:3;max-width:none}
+    }
+    @media(max-width:760px){
+      header>.top-actions{width:100%;display:flex;flex-wrap:wrap;justify-content:flex-start;gap:7px}
+      .top-actions .appearance-controls{display:flex;flex:1 1 100%;justify-content:flex-start;gap:7px}
+      #account-button.account-status{display:inline-flex;max-width:min(58vw,240px);min-width:0;flex:0 1 auto;padding:7px 9px}
+      #account-label{max-width:calc(58vw - 48px)}
+      #home-button:not([hidden]){display:inline-flex!important;min-height:34px;padding:7px 12px}
+      #room-view.active .composer-picker{position:fixed;left:12px;right:12px;bottom:12px;top:auto;width:auto;height:min(56dvh,420px);max-height:56dvh;z-index:120;box-shadow:0 12px 44px #0008}
+      #room-view.active .picker-head{top:-12px;background:inherit}
+    }
+    @media(max-width:440px){
+      body:not(.design-horizon) header>.top-actions{gap:6px}
+      #account-button.account-status{max-width:calc(100vw - 165px)}
+      #account-label{max-width:calc(100vw - 215px)}
+      #room-view.active .composer-picker{left:8px;right:8px;bottom:8px;height:58dvh;max-height:58dvh}
+    }
+  </style>
 </head>
 <body>
 <div class="shell">
