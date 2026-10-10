@@ -25,12 +25,13 @@ Husky is a temporary chat website with its API hosted by Cloudflare Pages Functi
 7. Open the Pages project **Settings → Bindings → Add → D1 database binding**. Set the variable name to exactly `DB` and select `gather-rooms`.
 8. In Pages **Settings → Variables and Secrets**, add these secrets:
    - `MASTER_ADMIN_CODE` = the private global admin code you choose
+   - `SESSION_SECRET` = a private random secret of at least 32 characters used to sign server-issued browser sessions (generate a different value from your master admin code)
    - `GIPHY_API_KEY` = your free GIPHY API key from [GIPHY Developers](https://developers.giphy.com/)
    - `TELEGRAM_BOT_TOKEN` = your bot token from BotFather (keep it secret)
    - `TELEGRAM_CHAT_ID` = the private chat or group where creator alerts should arrive
    - `TELEGRAM_CREATOR_USER_ID` = your numeric Telegram user ID; only this account may post replies from Telegram
    - `TELEGRAM_WEBHOOK_SECRET` = a random secret containing 32+ letters, digits, `_`, or `-`; use the same value when setting the webhook
-9. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device.
+9. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device. The API requires `SESSION_SECRET`; without it, requests fail safely rather than trusting client-supplied visitor identities.
 
 Enter the master code in the same optional admin password field when joining a room. Anyone with the master code can read and moderate every active room, change settings, and delete rooms. Keep the code private. The requested six-character code is convenient but weaker than a long random code; rotate it before sharing the site widely.
 
@@ -76,6 +77,6 @@ The API needs Cloudflare Pages Functions and a D1 database, so room creation wil
 
 - Cloudflare's free plan has daily request and D1 usage quotas. A ten-second poll uses about 8,640 API requests per continuously active browser per day, plus normal room actions. If the site gets busy, increase the polling interval or review Cloudflare's current limits.
 - A room password is stored as a salted PBKDF2 hash. Room admin passwords are random 8-character alphanumeric codes; their hashes are stored in D1. Keep admin passwords private.
-- Browser visitor identities are stored in local storage. Clearing browser storage or switching devices creates a new identity, so blocking is not a strong identity check.
+- Browser identities are issued by the server in a signed, HttpOnly, Secure, SameSite cookie. Client-supplied visitor IDs are ignored. Clearing cookies or switching devices creates a new identity, so blocking remains a browser-level control rather than verified real-world identity.
 - GIF and sticker search calls GIPHY directly from the browser as its API requires. The app asks Pages for the API key at runtime, so the key is visible to visitors; GIPHY keys are public-client credentials. Its free beta key is rate limited to 100 searches/API calls per hour. See GIPHY's [API fee and rate details](https://support.giphy.com/hc/en-us/articles/10389869671322-Is-there-a-fee-for-using-GIPHY-s-API) and [integration requirements](https://developers.giphy.com/docs/api/).
 - Messages cannot be deleted by their author. A room admin can delete messages, and deleted message contents are not recorded in the activity log.
