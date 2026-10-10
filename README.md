@@ -62,6 +62,8 @@ The client polls for chat updates every 10 seconds. The application does not use
    - [`migrations/0005_anonymous_usernames.sql`](migrations/0005_anonymous_usernames.sql) (unique anonymous usernames retained until room destruction)
    - [`migrations/0006_accounts.sql`](migrations/0006_accounts.sql) (optional accounts, password login, and profile icons)
    - [`migrations/0007_room_account_ownership.sql`](migrations/0007_room_account_ownership.sql) (account-based room ownership and admin access)
+   - [`migrations/0008_account_auth_attempts.sql`](migrations/0008_account_auth_attempts.sql) (signup/login rolling-window limits)
+   - [`migrations/0009_api_rate_limits.sql`](migrations/0009_api_rate_limits.sql) (room-creation and message-posting limits)
 4. In your Pages project, open **Settings → Bindings**, add a D1 database binding, set its variable name to exactly `DB`, and select `gather-rooms`.
 
 Do not rerun a migration against a database where it has already been applied.
@@ -142,6 +144,7 @@ Then open `http://localhost:8000`. This simple server does not run Cloudflare Pa
 - **Session identity:** the server issues a signed, HttpOnly, Secure, SameSite cookie. Client-supplied visitor IDs are ignored. Clearing cookies or changing devices creates a new browser identity; moderation blocks are not proof of real-world identity.
 - **Room passwords:** stored as salted PBKDF2 hashes. Keep administrator credentials private.
 - **GIPHY:** GIF/sticker search uses the GIPHY API from the browser. Treat its API key as a public-client credential, not a secret. Review [GIPHY API documentation](https://developers.giphy.com/docs/api/) and [rate/fee details](https://support.giphy.com/hc/en-us/articles/10389869671322-Is-there-a-fee-for-using-GIPHY-s-API).
+- **API rate limits:** room creation is limited to 5 per browser and 10 per IP in 15 minutes; message posting is limited to 30 per browser per room and 90 per IP per room per minute. These are D1-backed rolling windows, and hashed identifiers are stored. Apply migration `0009_api_rate_limits.sql` before deploying code that uses these limits.
 - **Polling and quotas:** the 10-second polling interval can generate about 8,640 requests per continuously active browser per day, before other actions. Review Cloudflare limits and adjust polling if usage grows.
 - **Privacy and conduct:** the in-app notice is a user-facing reminder, not a substitute for a complete privacy policy, terms of service, or legal review.
 - **Message deletion:** authors cannot delete their own messages. Room admins can delete messages; deleted message contents are not retained in the activity log.
