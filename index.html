@@ -505,6 +505,73 @@ button:disabled, .btn:disabled, .tool:disabled {
 }
 </style>
 
+
+<style id="chat-header-theme-picker-fixes">
+/* Header: keep guest/account and Home controls visible without collisions. */
+header { display:flex; flex-wrap:wrap; gap:12px; min-width:0; }
+header > .brand { flex:0 0 auto; min-width:0; }
+header > .top-actions { display:flex; flex:1 1 auto; flex-wrap:wrap; justify-content:flex-end; gap:8px; min-width:0; }
+header .appearance-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+#account-button { display:inline-flex; align-items:center; gap:7px; flex:0 1 auto; min-width:0; max-width:min(240px, 40vw); white-space:nowrap; }
+#account-label { display:inline-block; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+#home-button:not([hidden]) { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; min-width:64px; min-height:38px; white-space:nowrap; }
+#room-view.active .room-head > .top-actions { display:flex; flex-wrap:wrap; gap:8px; min-width:0; }
+.header-disclaimer { flex:0 1 auto; white-space:normal; max-width:560px; background:#edf7ef; border:1px solid #a9cdb0; color:#254f31; border-radius:8px; }
+.header-disclaimer strong { color:#193d24; }
+body.theme-dark .header-disclaimer,
+body.theme-dark.design-studio .header-disclaimer { background:#263c30; border-color:#6b9b78; color:#e0f4e5; }
+body.theme-dark .header-disclaimer strong { color:#fff; }
+/* Studio is the default; keep its warm palette readable in dark mode. */
+body.design-studio.theme-dark { --ink:#f2eee7; --muted:#c2b9ae; --line:#51483f; --bg:#1d1b19; background:#1d1b19; color:var(--ink); }
+body.design-studio.theme-dark .card,
+body.design-studio.theme-dark .panel,
+body.design-studio.theme-dark .rooms-wrap,
+body.design-studio.theme-dark .side,
+body.design-studio.theme-dark .chat-panel,
+body.design-studio.theme-dark .master-browser,
+body.design-studio.theme-dark .master-detail-pane,
+body.design-studio.theme-dark .modal { background:#292622; color:var(--ink); border-color:var(--line); }
+body.design-studio.theme-dark .input,
+body.design-studio.theme-dark .textarea,
+body.design-studio.theme-dark .tool,
+body.design-studio.theme-dark .room-table-wrap { background:#211f1c; color:var(--ink); border-color:#5b5147; }
+body.design-studio.theme-dark .room-table th { background:#383129; color:#f1e7da; }
+body.design-studio.theme-dark .room-table td { background:#292622; color:#f2eee7; border-color:#51483f; }
+body.design-studio.theme-dark .bubble { background:#403a32; color:#fff8ef; }
+body.design-studio.theme-dark .mine .bubble { background:#4c3a35; color:#fff8ef; }
+body.design-studio.theme-dark .event,
+body.design-studio.theme-dark .emoji-tray button,
+body.design-studio.theme-dark .emoji-categories button,
+body.design-studio.theme-dark .media-grid button { background:#383129; color:#f2eee7; }
+body.design-studio.theme-dark .note { background:#3b3025; color:#ffe1b4; }
+body.design-studio.theme-dark .note.error { background:#482b2b; color:#ffdada; }
+body.design-studio.theme-dark .note.success { background:#263b2c; color:#d7f7df; }
+/* Emoji picker: anchor above the composer and keep its close control above contents. */
+#room-view.active .composer { position:relative; z-index:5; }
+#room-view.active .composer-picker:not([hidden]) {
+  position:absolute; z-index:120; left:10px; right:10px; bottom:calc(100% + 8px);
+  max-height:min(48dvh, 390px); overflow:auto; overscroll-behavior:contain;
+  padding:12px; border:1px solid var(--line); border-radius:12px;
+  background:var(--panel, #fff); box-shadow:0 12px 32px #0003;
+}
+#room-view.active .picker-head { position:sticky; top:0; z-index:5; background:var(--panel, #fff); padding:4px 0 8px; }
+#room-view.active #emoji-close,
+#room-view.active #close-media { position:relative; z-index:8; min-width:40px; min-height:40px; flex:0 0 auto; }
+body.theme-dark #room-view.active .composer-picker:not([hidden]) { background:#292622; border-color:#665b4e; }
+@media(max-width:760px) {
+  header { align-items:flex-start; }
+  header > .brand { flex:1 1 100%; }
+  header > .top-actions { width:100%; flex:1 1 100%; justify-content:flex-start; }
+  #account-button { max-width:calc(100vw - 130px); }
+  #home-button:not([hidden]) { min-width:68px; }
+  #room-view.active .composer-picker:not([hidden]) { left:0; right:0; max-height:44dvh; }
+}
+@media(min-width:761px) {
+  header > .brand { margin-right:auto; }
+  header > .top-actions { flex:0 1 auto; }
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
