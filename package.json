@@ -1,0 +1,8 @@
+{
+  "name": "husky-chat-room",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:security": "node --test tests/*.test.mjs"
+  }
+}
