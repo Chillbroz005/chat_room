@@ -1,4 +1,4 @@
-const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','permissions-policy':'camera=(), microphone=(), geolocation=()'}});
 const fail=(message,status=400)=>json({error:message},status);
 const now=()=>Date.now();
 const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -116,7 +116,9 @@ export async function onRequest({request,env}){
    if(!await admin(db,request,id,env))return fail('Only the room admin can unmute members.',403);const b=await request.json(),target=String(b.targetId||'');await db.prepare('DELETE FROM muted WHERE room_id=? AND visitor_id=?').bind(id,target).run();const m=await db.prepare('SELECT display_name FROM members WHERE room_id=? AND visitor_id=?').bind(id,target).first();await activity(db,id,`${m?.display_name||'A member'} was unmuted`);return json({ok:true});
   }
   if(path.length===2&&method==='DELETE'){
-   const owner=await db.prepare('SELECT creator_id FROM rooms WHERE id=?').bind(id).first();if(!master&&owner?.creator_id!==visitor(request))return fail('Only the room creator or master admin can delete this room.',403);await db.prepare('DELETE FROM rooms WHERE id=?').bind(id).run();return json({ok:true});
+   const owner=await db.prepare('SELECT creator_id FROM rooms WHERE id=?').bind(id).first();
+   if(!master&&(owner?.creator_id!==visitor(request)||!await admin(db,request,id,env)))return fail('Only the room creator with valid admin credentials or the master admin can delete this room.',403);
+   await db.prepare('DELETE FROM rooms WHERE id=?').bind(id).run();return json({ok:true});
   }
   return fail('Not found.',404);
  }catch(e){return fail(e?.message||'Server error.',500)}
