@@ -15,6 +15,15 @@ async function activity(db,id,text){await db.prepare('INSERT INTO activity(room_
 async function roomEvent(db,id,text){await db.prepare("INSERT INTO messages(room_id,sender_id,display_name,kind,text,gif_url,created_at) VALUES(?, '', '', 'event', ?, '', ?)").bind(id,text,now()).run()}
 async function publicRoom(db,id){const r=await db.prepare('SELECT * FROM rooms WHERE id=? AND expires_at>?').bind(id,now()).first();if(!r)return null;const n=await db.prepare('SELECT COUNT(*) AS n FROM members WHERE room_id=?').bind(id).first();return safeRoom(r,n?.n||0)}
 function trim(v,max){return String(v||'').trim().slice(0,max)}
+// D1-backed rolling-window limits. Store hashes rather than raw IP/session identifiers.
+async function consumeRateLimit(db,action,subject,limit,windowMs,roomId=null){
+ const stamp=now(),subjectHash=await digest(subject);
+ const row=await db.prepare('SELECT COUNT(*) AS n FROM api_rate_limits WHERE action=? AND subject_hash=? AND created_at>?').bind(action,subjectHash,stamp-windowMs).first();
+ if((row?.n||0)>=limit)return false;
+ await db.prepare('INSERT INTO api_rate_limits(action,subject_hash,room_id,created_at) VALUES(?,?,?,?)').bind(action,subjectHash,roomId,stamp).run();
+ if(stamp%17===0)await db.prepare('DELETE FROM api_rate_limits WHERE created_at<?').bind(stamp-86400000).run();
+ return true;
+}
 async function sendCreatorTelegram(db,env,request,id,room,displayName,text){
  if(!env.TELEGRAM_BOT_TOKEN||!env.TELEGRAM_CHAT_ID)return 'not_configured';
  const recent=await db.prepare("SELECT COUNT(*) n FROM activity WHERE room_id=? AND text='@creator Telegram alert sent' AND created_at>?").bind(id,now()-300000).first();
@@ -87,6 +96,9 @@ async function handleRequest({request,env}){
   }
   if(path.length===1&&path[0]==='rooms'&&method==='POST'){
    const body=await request.json(),v=visitor(request);if(!v)return fail('Browser identity is missing. Refresh and retry.');
+   const clientIp=request.headers.get('CF-Connecting-IP')||v;
+   if(!await consumeRateLimit(db,'room_create_visitor',v,5,15*60*1000))return json({error:'Too many rooms created from this browser. Please wait 15 minutes and try again.'},429);
+   if(!await consumeRateLimit(db,'room_create_ip',clientIp,10,15*60*1000))return json({error:'Too many rooms created from this network. Please wait 15 minutes and try again.'},429);
    const expires=Number(body.expiresMinutes);if(!Number.isInteger(expires)||expires<1||expires>43200)return fail('Expiry must be from 1 minute to 30 days.');
    const account=await currentAccount(db,request),roomId=code(),created=now(),name=trim(body.name,48)||`${['Cozy','Happy','Quiet','Sunny','Friendly'][Math.floor(Math.random()*5)]} ${['Corner','Club','Lounge','Room','Hideout'][Math.floor(Math.random()*5)]}`,creator=account?.username||trim(body.creatorName,24)||'Sunny Fox',adminKey=code(8),salt=code(16),pass=trim(body.password,64),pHash=pass?await passwordHash(pass,salt):null;if(pass&&pass.length<8)return fail('Room passwords must be at least 8 characters.');
    await db.batch([db.prepare('INSERT INTO rooms(id,name,creator_name,creator_id,creator_account_id,created_at,expires_at,description,password_salt,password_hash) VALUES(?,?,?,?,?,?,?,?,?,?)').bind(roomId,name,creator,v,account?.id||null,created,created+expires*60000,trim(body.description,180),pass?salt:null,pHash),db.prepare('INSERT INTO room_admins(room_id,visitor_id,key_hash) VALUES(?,?,?)').bind(roomId,v,await digest(adminKey)),db.prepare('INSERT INTO members(room_id,visitor_id,display_name,joined_at,last_seen) VALUES(?,?,?,?,?)').bind(roomId,v,creator,created,created),db.prepare('INSERT INTO activity(room_id,text,created_at) VALUES(?,?,?)').bind(roomId,`${creator} created the room`,created),db.prepare("INSERT INTO messages(room_id,sender_id,display_name,kind,text,created_at) VALUES(?,?,'','event',?,?)").bind(roomId,'',`${creator} created the room`,created)]);
@@ -114,7 +126,11 @@ async function handleRequest({request,env}){
   }
   if(path.length===3&&path[2]==='leave'&&method==='POST'){const v=visitor(request),m=await member(db,request,id);if(m){await db.prepare('DELETE FROM members WHERE room_id=? AND visitor_id=?').bind(id,v).run();await activity(db,id,`${m.display_name} left the room`);await roomEvent(db,id,`${m.display_name} left the room`)}return json({ok:true})}
   if(path.length===3&&path[2]==='messages'&&method==='POST'){
-   const v=visitor(request),m=await member(db,request,id);if(!m)return fail('Join this room first.',403);if(await db.prepare('SELECT 1 FROM muted WHERE room_id=? AND visitor_id=?').bind(id,v).first())return fail('You are muted in this room. You can still read messages.',403);const b=await request.json(),kind=b.kind==='gif'?'gif':'text',text=trim(b.text,255);if(kind==='text'&&!text)return fail('Message cannot be empty.');let gif='';if(kind==='gif'){try{const u=new URL(String(b.gifUrl||''));if(u.protocol!=='https:'||u.href.length>500)throw 0;gif=u.href}catch{return fail('GIF URL must be a valid HTTPS link under 500 characters.')}}
+   const v=visitor(request),m=await member(db,request,id);if(!m)return fail('Join this room first.',403);if(await db.prepare('SELECT 1 FROM muted WHERE room_id=? AND visitor_id=?').bind(id,v).first())return fail('You are muted in this room. You can still read messages.',403);
+   const clientIp=request.headers.get('CF-Connecting-IP')||v;
+   if(!await consumeRateLimit(db,'message_send_room_visitor',`${id}:${v}`,30,60*1000,id))return json({error:'You are sending messages too quickly. Please wait a minute and try again.'},429);
+   if(!await consumeRateLimit(db,'message_send_room_ip',`${id}:${clientIp}`,90,60*1000,id))return json({error:'Too many messages from this network in this room. Please wait a minute and try again.'},429);
+   const b=await request.json(),kind=b.kind==='gif'?'gif':'text',text=trim(b.text,255);if(kind==='text'&&!text)return fail('Message cannot be empty.');let gif='';if(kind==='gif'){try{const u=new URL(String(b.gifUrl||''));if(u.protocol!=='https:'||u.href.length>500)throw 0;gif=u.href}catch{return fail('GIF URL must be a valid HTTPS link under 500 characters.')}}
    const replyToId=Number(b.replyToId)||null;if(replyToId){const parent=await db.prepare('SELECT id FROM messages WHERE id=? AND room_id=? AND kind!=\'event\'').bind(replyToId,id).first();if(!parent)return fail('Reply target not found.',404)}await db.prepare('INSERT INTO messages(room_id,sender_id,display_name,kind,text,gif_url,created_at,reply_to_id) VALUES(?,?,?,?,?,?,?,?)').bind(id,v,m.display_name,kind,text,gif,now(),replyToId).run();const adminTagged=kind==='text'&&/(^|\s)@admin\b/i.test(text);if(adminTagged){await activity(db,id,`${m.display_name} tagged @admin`);await roomEvent(db,id,`${m.display_name} tagged @admin - room admins, please review`)}const creatorTagged=kind==='text'&&/(^|\s)@creator\b/i.test(text),creatorAlert=creatorTagged?await sendCreatorTelegram(db,env,request,id,room,m.display_name,text):'none';return json({ok:true,creatorAlert},201);
   }
   if(path.length===4&&path[2]==='messages'&&method==='PATCH'){
