@@ -1,81 +1,147 @@
-# Husky chat rooms
+# Husky Chat Room
 
-Husky is a temporary chat website with its API hosted by Cloudflare Pages Functions and room data stored in Cloudflare D1. The app polls for chat updates every 10 seconds. It does not use Firebase.
+A lightweight, temporary chat-room web app built on **Cloudflare Pages Functions** and **Cloudflare D1**. Create rooms, invite people, and chat with text, emoji, GIFs, and stickers—without Firebase.
+
+<p align="center">
+  <strong>Simple rooms · Temporary conversations · Cloudflare-native backend</strong>
+</p>
 
 ## Features
 
-- Create a room with a generated or custom name and optional password.
-- Browse rooms and see the host, creation date, expiry, description, and member count.
-- Set room lifetime from one minute to 30 days.
-- Chat with text, categorized emoji, GIPHY GIFs, and stickers. Text is limited to 255 characters.
-- Room admins can delete messages, edit room details/password/expiry, block or mute members, nominate admins, and view the activity log.
-- Room creators can permanently delete their room. Admin badges are shown in chat.
-- Members can use `@creator` for a Telegram alert with the chat invite, or `@admin` to alert the room admins. Room admins can promote/demote members beside mute and block controls.
-- A master admin code can access all active rooms.
-- Join and leave events appear in chat. Expired rooms are removed as requests reach the API.
+- **Room management** — create rooms with generated or custom names, optional passwords, descriptions, and configurable lifetimes from one minute to 30 days.
+- **Live chat** — messages, categorized emoji, GIPHY GIFs, and stickers; message text is limited to 255 characters.
+- **Room moderation** — admins can edit room settings, manage passwords and expiry, mute or block members, promote or demote admins, delete messages, and review room activity.
+- **Ownership controls** — room creators can permanently delete their rooms; a master administrator can manage active rooms globally.
+- **Member activity** — join/leave events, member counts, host information, creation dates, and expiry details.
+- **Notifications** — `@creator` can send a room mention to a configured Telegram destination; `@admin` alerts room administrators.
+- **Server-issued browser identity** — signed session cookies replace trust in client-supplied visitor IDs.
+- **Security headers** — API responses include security-related headers.
 
-## Deploy to Cloudflare Pages (free plan)
+## Tech stack
 
-1. Sign in to Cloudflare and open **Workers & Pages**. Choose **Create application → Pages → Connect to Git** and select `Chillbroz005/chat_room`.
-2. Set the build command to blank (or `exit 0`) and the build output directory to `.`. Deploy the project. Pages Functions are in the repository's `functions/` folder.
-3. In Cloudflare, open **Workers & Pages → D1 SQL Database → Create database**. Name it `gather-rooms`.
-4. Open the new database's **Console** and run the full SQL from [`migrations/0001_init.sql`](migrations/0001_init.sql).
-5. If you already deployed the earlier deployed version, also run [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql) once. This adds room ownership and mute controls; do not run it more than once.
-6. Run [migrations/0003_telegram_replies.sql](migrations/0003_telegram_replies.sql) once to enable Telegram replies and duplicate-update protection.
-7. Open the Pages project **Settings → Bindings → Add → D1 database binding**. Set the variable name to exactly `DB` and select `gather-rooms`.
-8. In Pages **Settings → Variables and Secrets**, add these secrets:
-   - `MASTER_ADMIN_CODE` = the private global admin code you choose
-   - `GIPHY_API_KEY` = your free GIPHY API key from [GIPHY Developers](https://developers.giphy.com/)
-   - `TELEGRAM_BOT_TOKEN` = your bot token from BotFather (keep it secret)
-   - `TELEGRAM_CHAT_ID` = the private chat or group where creator alerts should arrive
-   - `TELEGRAM_CREATOR_USER_ID` = your numeric Telegram user ID; only this account may post replies from Telegram
-   - `TELEGRAM_WEBHOOK_SECRET` = a random secret containing 32+ letters, digits, `_`, or `-`; use the same value when setting the webhook
-9. Save and redeploy. Open the `*.pages.dev` URL, create a room, and test joining from another browser/device.
+| Layer | Technology |
+| --- | --- |
+| Frontend | HTML, CSS, JavaScript |
+| Serverless API | Cloudflare Pages Functions |
+| Database | Cloudflare D1 (SQLite) |
+| GIF and sticker search | GIPHY API |
+| Optional notifications and replies | Telegram Bot API |
 
-Enter the master code in the same optional admin password field when joining a room. Anyone with the master code can read and moderate every active room, change settings, and delete rooms. Keep the code private. The requested six-character code is convenient but weaker than a long random code; rotate it before sharing the site widely.
+## Architecture
 
-If you see “D1 binding DB is missing”, the binding was not saved under the exact name `DB`, or the project needs a new deployment after saving it.
+```text
+Browser
+  ├── Static UI and chat interactions
+  └── /api/* requests
+         └── Cloudflare Pages Functions
+                ├── Signed browser-session identity
+                ├── Room and moderation API
+                ├── Telegram webhook integration
+                └── Cloudflare D1
+```
 
-## Telegram creator replies
+The client polls for chat updates every 10 seconds. The application does not use Firebase.
 
-The bot can return your Telegram replies to the room without you joining or knowing its room password. Replies are accepted only from `TELEGRAM_CREATOR_USER_ID` in `TELEGRAM_CHAT_ID`.
+## Deployment
 
-1. Open a private chat with your bot and send `/start` so Telegram permits the bot to message you.
-2. Before setting a webhook, get your numeric Telegram user ID from `https://api.telegram.org/bot<TOKEN>/getUpdates` after sending a message to the bot. Put that number in `TELEGRAM_CREATOR_USER_ID`. If a webhook is already configured, check the bot updates using its current webhook/Cloudflare logs instead; `getUpdates` and a webhook cannot be used at the same time.
-3. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_CREATOR_USER_ID`, and `TELEGRAM_WEBHOOK_SECRET` in Cloudflare Pages **Settings → Variables and Secrets**. Prefer your private chat as `TELEGRAM_CHAT_ID` so creator alerts and replies stay private.
-4. Set Telegram's webhook URL to `https://YOUR-PROJECT.pages.dev/api/telegram-webhook`, with `secret_token` set to the same `TELEGRAM_WEBHOOK_SECRET` value and `allowed_updates` set to `message`. From PowerShell, this prompts for the bot token and webhook secret rather than writing either into the command:
+### 1. Connect the repository to Cloudflare Pages
 
-   ```powershell
-   $token = Read-Host "Bot token"
-   $secret = Read-Host "Webhook secret"
-   $body = @{ url = "https://YOUR-PROJECT.pages.dev/api/telegram-webhook"; secret_token = $secret; allowed_updates = @("message") } | ConvertTo-Json -Compress
-   Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType "application/json" -Body $body
-   ```
+1. In Cloudflare, open **Workers & Pages → Create application → Pages → Connect to Git**.
+2. Select `Chillbroz005/chat_room`.
+3. Use `.` as the build output directory. No build command is required for the static frontend.
+4. Deploy the project. The `functions/` directory provides the Pages Functions API.
 
-5. In a room, use `@creator`. Reply directly to its Telegram alert, or send `/reply ROOMCODE your message` to the bot. The response is posted as **Husky Creator (Telegram)** and is limited to 255 characters. Replies to expired rooms are rejected.
+### 2. Create and bind the D1 database
 
-Telegram documents [`setWebhook`](https://core.telegram.org/bots/api#setwebhook) and its [secret token header](https://core.telegram.org/bots/api#setwebhook).
-## Mentions and room conduct
+1. Create a D1 database named `gather-rooms`.
+2. In the database Console, run the SQL in [`migrations/0001_init.sql`](migrations/0001_init.sql).
+3. For an existing deployment that has not applied the later migrations, apply each required migration once and in order:
+   - [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql)
+   - [`migrations/0003_telegram_replies.sql`](migrations/0003_telegram_replies.sql)
+4. In your Pages project, open **Settings → Bindings**, add a D1 database binding, set its variable name to exactly `DB`, and select `gather-rooms`.
 
-- `@creator` forwards the mentioning message and a room invite link to the configured Telegram chat. Alerts are limited to one per room every five minutes.
-- `@admin` creates a visible chat notice and an entry in the room admin activity log.
-- To find your Telegram chat ID, send `/start` to your bot, then call the Bot API `getUpdates` method and read `message.from.id` for `TELEGRAM_CREATOR_USER_ID` and `message.chat.id` for `TELEGRAM_CHAT_ID`. Telegram documents the HTTPS Bot API request format and `sendMessage` method [here](https://core.telegram.org/bots/api). Never put the bot token in this repository or share it in public.
-- The chat shows a conduct and privacy notice. It is a user-facing reminder, not a substitute for jurisdiction-specific terms, privacy disclosures, or legal review.
+Do not rerun a migration against a database where it has already been applied.
+
+### 3. Configure secrets and variables
+
+In **Workers & Pages → your Pages project → Settings → Variables and Secrets**, configure the values below. Use the appropriate production environment and redeploy after changing settings.
+
+| Name | Purpose |
+| --- | --- |
+| `SESSION_SECRET` | Required. Random secret of at least 32 characters used to sign server-issued browser sessions. Keep it private and separate from every other secret. |
+| `MASTER_ADMIN_CODE` | Private global administrator code. Anyone who has it can moderate active rooms and change room settings. |
+| `GIPHY_API_KEY` | GIPHY API key for GIF and sticker search. |
+| `TELEGRAM_BOT_TOKEN` | Optional Telegram bot token for notifications and replies. |
+| `TELEGRAM_CHAT_ID` | Optional destination for creator notifications. |
+| `TELEGRAM_CREATOR_USER_ID` | Optional numeric Telegram user ID authorized to send replies. |
+| `TELEGRAM_WEBHOOK_SECRET` | Optional secret used to verify Telegram webhook requests; use the same value when registering the webhook. |
+
+**Generate `SESSION_SECRET` securely.** For example, in PowerShell:
+
+```powershell
+[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+Copy the generated value into Cloudflare's secret field. Do not commit it to Git, put it in frontend code, or share it publicly. The API intentionally fails closed when `SESSION_SECRET` is missing or too short.
+
+The master administrator code is powerful: keep it private and use a strong value. It is separate from `SESSION_SECRET`.
+
+### 4. Verify the deployment
+
+After saving bindings and secrets, redeploy and check:
+
+1. The site loads without browser-console errors.
+2. A room can be created and joined from separate browsers or devices.
+3. Password-protected rooms and expiry behave as expected.
+4. Room moderation is limited to authorized administrators.
+5. Telegram features work only if their optional configuration is complete.
+
+If the API reports that the `DB` binding is missing, verify the exact binding name and redeploy. If session setup is reported as incomplete, confirm that `SESSION_SECRET` is configured in the environment serving the site.
+
+## Optional Telegram integration
+
+Telegram integration lets users mention the creator and lets the configured creator reply to a room without joining it directly.
+
+1. Start a private chat with your bot using `/start`.
+2. Obtain your numeric Telegram user ID and configure `TELEGRAM_CREATOR_USER_ID`. If a webhook is active, use your existing webhook/logging workflow; Telegram's `getUpdates` and webhook delivery cannot be used simultaneously.
+3. Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_CREATOR_USER_ID`, and `TELEGRAM_WEBHOOK_SECRET` in Cloudflare.
+4. Register the webhook at `https://YOUR-PROJECT.pages.dev/api/telegram-webhook`, using the same secret as Telegram's `secret_token` and allowing the `message` update type.
+5. In a room, use `@creator` to trigger a notification. Reply directly to the notification or send `/reply ROOMCODE your message` to the bot.
+
+PowerShell example (prompts for secrets rather than embedding them in the command):
+
+```powershell
+$token = Read-Host "Bot token"
+$secret = Read-Host "Webhook secret"
+$body = @{
+  url = "https://YOUR-PROJECT.pages.dev/api/telegram-webhook"
+  secret_token = $secret
+  allowed_updates = @("message")
+} | ConvertTo-Json -Compress
+Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType "application/json" -Body $body
+```
+
+References: [Telegram setWebhook](https://core.telegram.org/bots/api#setwebhook) · [Webhook secret token](https://core.telegram.org/bots/api#setwebhook).
 
 ## Local preview
 
-The static page can be previewed with:
+For a static UI preview, run:
 
 ```powershell
 python -m http.server 8000
 ```
 
-The API needs Cloudflare Pages Functions and a D1 database, so room creation will not work from this basic static server. For local full-stack development, use Wrangler Pages dev after installing Wrangler and configuring a local D1 database.
+Then open `http://localhost:8000`. This simple server does not run Cloudflare Pages Functions, so API-backed features such as room creation will not work. For full-stack local development, use Wrangler Pages dev with a local D1 database.
 
-## Notes
+## Security and operational notes
 
-- Cloudflare's free plan has daily request and D1 usage quotas. A ten-second poll uses about 8,640 API requests per continuously active browser per day, plus normal room actions. If the site gets busy, increase the polling interval or review Cloudflare's current limits.
-- A room password is stored as a salted PBKDF2 hash. Room admin passwords are random 8-character alphanumeric codes; their hashes are stored in D1. Keep admin passwords private.
-- Browser visitor identities are stored in local storage. Clearing browser storage or switching devices creates a new identity, so blocking is not a strong identity check.
-- GIF and sticker search calls GIPHY directly from the browser as its API requires. The app asks Pages for the API key at runtime, so the key is visible to visitors; GIPHY keys are public-client credentials. Its free beta key is rate limited to 100 searches/API calls per hour. See GIPHY's [API fee and rate details](https://support.giphy.com/hc/en-us/articles/10389869671322-Is-there-a-fee-for-using-GIPHY-s-API) and [integration requirements](https://developers.giphy.com/docs/api/).
-- Messages cannot be deleted by their author. A room admin can delete messages, and deleted message contents are not recorded in the activity log.
+- **Session identity:** the server issues a signed, HttpOnly, Secure, SameSite cookie. Client-supplied visitor IDs are ignored. Clearing cookies or changing devices creates a new browser identity; moderation blocks are not proof of real-world identity.
+- **Room passwords:** stored as salted PBKDF2 hashes. Keep administrator credentials private.
+- **GIPHY:** GIF/sticker search uses the GIPHY API from the browser. Treat its API key as a public-client credential, not a secret. Review [GIPHY API documentation](https://developers.giphy.com/docs/api/) and [rate/fee details](https://support.giphy.com/hc/en-us/articles/10389869671322-Is-there-a-fee-for-using-GIPHY-s-API).
+- **Polling and quotas:** the 10-second polling interval can generate about 8,640 requests per continuously active browser per day, before other actions. Review Cloudflare limits and adjust polling if usage grows.
+- **Privacy and conduct:** the in-app notice is a user-facing reminder, not a substitute for a complete privacy policy, terms of service, or legal review.
+- **Message deletion:** authors cannot delete their own messages. Room admins can delete messages; deleted message contents are not retained in the activity log.
+
+## Project status
+
+This repository is actively being hardened. Security and deployment guidance in this README describes the intended configuration; always validate changes in a staging deployment before relying on them in production. Automated and browser-level testing may still be required after changes.
