@@ -36,7 +36,7 @@ function constantTimeEqual(a,b){if(a.length!==b.length)return false;let mismatch
 async function sendTelegramNotice(env,chatId,text){if(!env.TELEGRAM_BOT_TOKEN)return;try{await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:chatId,text})})}catch{}}
 function parseTelegramReply(message){const text=String(message?.text||'').trim(),command=text.match(/^\/reply(?:@\w+)?\s+([A-Z0-9]{6})\s+([\s\S]+)$/i);if(command)return {roomId:command[1].toUpperCase(),text:command[2].trim()};if(text.startsWith('/reply'))return {error:'Use /reply ROOMCODE message, or reply directly to a @creator alert.'};const original=message?.reply_to_message;if(!original?.from?.is_bot||!original.text)return {error:'Reply to a @creator alert, or use /reply ROOMCODE message.'};const match=String(original.text).match(/^@creator mention in [\s\S]*\(([A-Z0-9]{6})\)\r?\nFrom:/i);if(!match)return {error:'That Telegram message is not a Husky creator alert.'};return {roomId:match[1].toUpperCase(),text}}
 async function handleTelegramWebhook(request,env,db){const expected=String(env.TELEGRAM_WEBHOOK_SECRET||''),supplied=request.headers.get('X-Telegram-Bot-Api-Secret-Token')||'';if(!expected)return fail('Telegram reply webhook is not configured.',503);if(!constantTimeEqual(supplied,expected))return fail('Webhook authentication failed.',403);if(!env.TELEGRAM_BOT_TOKEN||!env.TELEGRAM_CHAT_ID||!env.TELEGRAM_CREATOR_USER_ID)return fail('Telegram reply settings are incomplete.',503);let update;try{update=await request.json()}catch{return fail('Invalid Telegram update.')}const message=update?.message;if(!Number.isInteger(update?.update_id)||!message)return json({ok:true});if(String(message.chat?.id)!==String(env.TELEGRAM_CHAT_ID)||String(message.from?.id)!==String(env.TELEGRAM_CREATOR_USER_ID)||message.from?.is_bot)return json({ok:true});const reply=parseTelegramReply(message);if(reply.error){await sendTelegramNotice(env,message.chat.id,reply.error);return json({ok:true})}if(!reply.text)return json({ok:true});if(reply.text.length>255){await sendTelegramNotice(env,message.chat.id,'That reply is over Husky’s 255-character limit and was not posted.');return json({ok:true})}const room=await db.prepare('SELECT id FROM rooms WHERE id=? AND expires_at>?').bind(reply.roomId,now()).first();if(!room){await sendTelegramNotice(env,message.chat.id,`Room ${reply.roomId} was not found or has expired.`);return json({ok:true})}const timestamp=now(),senderId=`telegram:${message.from.id}`,displayName='Husky Creator (Telegram)',body=reply.text;await db.prepare('DELETE FROM telegram_updates WHERE created_at<?').bind(timestamp-90*86400000).run();const result=await db.batch([db.prepare('INSERT OR IGNORE INTO telegram_updates(update_id,created_at) VALUES(?,?)').bind(update.update_id,timestamp),db.prepare("INSERT INTO messages(room_id,sender_id,display_name,kind,text,gif_url,created_at) SELECT ?,?,?,'text',?,'',? WHERE changes()=1").bind(room.id,senderId,displayName,body,timestamp),db.prepare('INSERT INTO activity(room_id,text,created_at) SELECT ?,?,? WHERE changes()=1').bind(room.id,'Husky Creator replied via Telegram',timestamp)]);if(!result?.[1]?.meta?.changes)return json({ok:true,duplicate:true});await sendTelegramNotice(env,message.chat.id,`Sent to ${reply.roomId}.`);return json({ok:true})}
-export async function onRequest({request,env}){
+async function handleRequest({request,env}){
  if(!env.DB)return fail('Cloudflare D1 binding DB is missing. See README setup.',503);
  const db=env.DB.withSession('first-primary'),method=request.method,path=new URL(request.url).pathname.replace(/^\/api\/?/,'').split('/').filter(Boolean).map(decodeURIComponent),master=isMaster(request,env);
  try{
@@ -122,4 +122,39 @@ export async function onRequest({request,env}){
   }
   return fail('Not found.',404);
  }catch(e){return fail(e?.message||'Server error.',500)}
+}
+
+
+// Server-issued, signed browser identity. Client-supplied X-Visitor-Id is overwritten
+// before any endpoint runs, so public member IDs cannot be used to impersonate users.
+async function sessionSignature(id, secret) {
+ const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+ const bytes = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(id)));
+ return [...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+async function sessionVisitor(request, secret) {
+ const cookie = (request.headers.get('Cookie') || '').split(';').map(v=>v.trim()).find(v=>v.startsWith('__Host-husky-session='));
+ if (!cookie) return null;
+ const token = cookie.slice('__Host-husky-session='.length);
+ const dot = token.lastIndexOf('.');
+ if (dot < 1) return null;
+ const id = token.slice(0,dot), supplied = token.slice(dot+1);
+ if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f]{64}$/i.test(supplied)) return null;
+ const expected = await sessionSignature(id, secret);
+ return constantTimeEqual(supplied, expected) ? id : null;
+}
+export async function onRequest({request,env}) {
+ if (!env.SESSION_SECRET || String(env.SESSION_SECRET).length < 32) {
+  return fail('Server setup incomplete: add a SESSION_SECRET with at least 32 characters in Cloudflare Pages secrets.',503);
+ }
+ const id = await sessionVisitor(request, String(env.SESSION_SECRET)) || crypto.randomUUID();
+ const signature = await sessionSignature(id, String(env.SESSION_SECRET));
+ const headers = new Headers(request.headers);
+ headers.set('X-Visitor-Id', id);
+ const trustedRequest = new Request(request, {headers});
+ const response = await handleRequest({request:trustedRequest,env});
+ const responseHeaders = new Headers(response.headers);
+ responseHeaders.set('X-Husky-Visitor-Id', id);
+ responseHeaders.append('Set-Cookie', `__Host-husky-session=${id}.${signature}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
+ return new Response(response.body, {status:response.status,statusText:response.statusText,headers:responseHeaders});
 }
