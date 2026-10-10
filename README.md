@@ -58,6 +58,7 @@ The client polls for chat updates every 10 seconds. The application does not use
 3. For an existing deployment that has not applied the later migrations, apply each required migration once and in order:
    - [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql)
    - [`migrations/0003_telegram_replies.sql`](migrations/0003_telegram_replies.sql)
+   - [`migrations/0004_chat_features.sql`](migrations/0004_chat_features.sql) (replies, reactions, edits, typing indicators)
 4. In your Pages project, open **Settings → Bindings**, add a D1 database binding, set its variable name to exactly `DB`, and select `gather-rooms`.
 
 Do not rerun a migration against a database where it has already been applied.
