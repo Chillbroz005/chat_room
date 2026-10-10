@@ -1,0 +1,1 @@
+ALTER TABLE rooms ADD COLUMN creator_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL;
