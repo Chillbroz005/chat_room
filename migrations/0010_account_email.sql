@@ -1,0 +1,2 @@
+ALTER TABLE accounts ADD COLUMN email TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_unique ON accounts(email COLLATE NOCASE) WHERE email IS NOT NULL;
