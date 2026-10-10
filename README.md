@@ -59,6 +59,7 @@ The client polls for chat updates every 10 seconds. The application does not use
    - [`migrations/0002_room_admin_tools.sql`](migrations/0002_room_admin_tools.sql)
    - [`migrations/0003_telegram_replies.sql`](migrations/0003_telegram_replies.sql)
    - [`migrations/0004_chat_features.sql`](migrations/0004_chat_features.sql) (replies, reactions, edits, typing indicators)
+   - [`migrations/0005_anonymous_usernames.sql`](migrations/0005_anonymous_usernames.sql) (unique anonymous usernames retained until room destruction)
 4. In your Pages project, open **Settings → Bindings**, add a D1 database binding, set its variable name to exactly `DB`, and select `gather-rooms`.
 
 Do not rerun a migration against a database where it has already been applied.
