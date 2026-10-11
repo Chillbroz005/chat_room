@@ -94,6 +94,18 @@ async function handleRequest({request,env}){
   }
   if(path.length===2&&path[0]==='account'&&path[1]==='logout'&&method==='POST'){await db.prepare('DELETE FROM browser_accounts WHERE visitor_id=?').bind(visitor(request)).run();return json({ok:true})}
   if(path.length===2&&path[0]==='account'&&path[1]==='profile'&&method==='POST'){const account=await currentAccount(db,request);if(!account)return fail('Log in first.',401);const b=await request.json(),avatar=String(b.avatar||'');if(!accountAvatars.includes(avatar))return fail('Choose a supported profile icon.');await db.prepare('UPDATE accounts SET avatar=? WHERE id=?').bind(avatar,account.id).run();return json({account:{username:account.username,avatar}})}
+  if(path.length===1&&path[0]==='policy'&&method==='GET'){
+   const v=visitor(request),version='2026-10-11-v1';
+   const accepted=!!v&&!!await db.prepare('SELECT 1 FROM policy_acceptances WHERE visitor_id=? AND policy_version=?').bind(v,version).first();
+   return json({version,accepted});
+  }
+  if(path.length===2&&path[0]==='policy'&&path[1]==='accept'&&method==='POST'){
+   const v=visitor(request);if(!v)return fail('Browser identity is missing.');
+   const b=await request.json(),version=String(b.version||'');
+   if(version!=='2026-10-11-v1'||b.accepted!==true)return fail('Accept the current policies to continue.');
+   await db.prepare('INSERT OR IGNORE INTO policy_acceptances(visitor_id,policy_version,accepted_at) VALUES(?,?,?)').bind(v,version,now()).run();
+   return json({ok:true,version});
+  }
   if(path.length===1&&path[0]==='rooms'&&method==='GET'){
    const stamp=now(),account=await currentAccount(db,request);const [rows,stats]=await Promise.all([db.prepare("SELECT r.*,COUNT(m.visitor_id) member_count,SUM(CASE WHEN m.last_seen>? THEN 1 ELSE 0 END) online_count,(SELECT COUNT(*) FROM messages x WHERE x.room_id=r.id AND x.kind!='event') message_count FROM rooms r LEFT JOIN members m ON m.room_id=r.id WHERE r.expires_at>? GROUP BY r.id ORDER BY r.created_at DESC LIMIT 100").bind(stamp-30000,stamp).all(),db.prepare("SELECT (SELECT COUNT(*) FROM rooms WHERE expires_at>?) room_count,(SELECT COUNT(*) FROM messages m JOIN rooms r ON r.id=m.room_id WHERE r.expires_at>? AND m.kind!='event') message_count,(SELECT COUNT(*) FROM members m JOIN rooms r ON r.id=m.room_id WHERE r.expires_at>?) member_count,(SELECT COUNT(*) FROM members m JOIN rooms r ON r.id=m.room_id WHERE r.expires_at>? AND m.last_seen>?) online_count").bind(stamp,stamp,stamp,stamp,stamp-30000).first()]);return json({rooms:(rows.results||[]).map(r=>({...safeRoom(r,r.member_count),isYourRoom:!!account&&r.creator_account_id===account.id,onlineCount:r.online_count||0,messageCount:r.message_count})),stats:{rooms:stats?.room_count||0,messages:stats?.message_count||0,members:stats?.member_count||0,online:stats?.online_count||0}});
   }
@@ -108,6 +120,8 @@ async function handleRequest({request,env}){
    return json({apiKey:env.GIPHY_API_KEY});
   }
   if(path.length===1&&path[0]==='rooms'&&method==='POST'){
+   const policyVersion='2026-10-11-v1',policyVisitor=visitor(request);
+   if(!policyVisitor||!await db.prepare('SELECT 1 FROM policy_acceptances WHERE visitor_id=? AND policy_version=?').bind(policyVisitor,policyVersion).first())return fail('Accept the current policies before creating a room.',428);
    const body=await request.json(),v=visitor(request);if(!v)return fail('Browser identity is missing. Refresh and retry.');
    const clientIp=request.headers.get('CF-Connecting-IP')||v;
    if(!await consumeRateLimit(db,'room_create_visitor',v,5,15*60*1000))return json({error:'Too many rooms created from this browser. Please wait 15 minutes and try again.'},429);
@@ -116,6 +130,23 @@ async function handleRequest({request,env}){
    const account=await currentAccount(db,request),roomId=code(),created=now(),name=trim(body.name,48)||`${['Cozy','Happy','Quiet','Sunny','Friendly'][Math.floor(Math.random()*5)]} ${['Corner','Club','Lounge','Room','Hideout'][Math.floor(Math.random()*5)]}`,creator=account?.username||trim(body.creatorName,24)||'Sunny Fox',adminKey=code(8),salt=code(16),pass=trim(body.password,64),pHash=pass?await passwordHash(pass,salt):null;if(pass&&pass.length<8)return fail('Room passwords must be at least 8 characters.');if(await db.prepare('SELECT 1 FROM rooms WHERE name=? COLLATE NOCASE AND expires_at>? LIMIT 1').bind(name,created).first())return fail('That room name is already taken. Choose a different name.',409);
    await db.batch([db.prepare('INSERT INTO rooms(id,name,creator_name,creator_id,creator_account_id,created_at,expires_at,description,password_salt,password_hash) VALUES(?,?,?,?,?,?,?,?,?,?)').bind(roomId,name,creator,v,account?.id||null,created,created+expires*60000,trim(body.description,180),pass?salt:null,pHash),db.prepare('INSERT INTO room_admins(room_id,visitor_id,key_hash) VALUES(?,?,?)').bind(roomId,v,await digest(adminKey)),db.prepare('INSERT INTO members(room_id,visitor_id,display_name,joined_at,last_seen) VALUES(?,?,?,?,?)').bind(roomId,v,creator,created,created),db.prepare('INSERT INTO activity(room_id,text,created_at) VALUES(?,?,?)').bind(roomId,`${creator} created the room`,created),db.prepare("INSERT INTO messages(room_id,sender_id,display_name,kind,text,created_at) VALUES(?,?,'','event',?,?)").bind(roomId,'',`${creator} created the room`,created)]);
    return json({room:await publicRoom(db,roomId),...(account?{}:{adminKey}),creatorName:creator},201);
+  }
+  if(path.length===2&&path[0]==='invites'&&method==='GET'){
+   const token=String(path[1]||'');if(!/^[A-Za-z0-9_-]{24,80}$/.test(token))return fail('Invite link is invalid or revoked.',404);
+   const tokenHash=await digest(token),row=await db.prepare('SELECT i.room_id FROM room_invites i JOIN rooms r ON r.id=i.room_id WHERE i.token_hash=? AND i.revoked_at IS NULL AND r.expires_at>?').bind(tokenHash,now()).first();
+   if(!row)return fail('Invite link is invalid, revoked, or expired.',404);
+   return json({room:await publicRoom(db,row.room_id),inviteToken:token});
+  }
+  if(path.length===3&&path[0]==='rooms'&&path[2]==='invites'&&method==='POST'){
+   const id=path[1].toUpperCase();if(!await admin(db,request,id,env))return fail('Only a room admin can generate an invite link.',403);
+   const token=code(40),tokenHash=await digest(token),stamp=now();
+   await db.batch([db.prepare('UPDATE room_invites SET revoked_at=? WHERE room_id=? AND revoked_at IS NULL').bind(stamp,id),db.prepare('INSERT INTO room_invites(token_hash,room_id,created_at,revoked_at) VALUES(?,?,?,NULL)').bind(tokenHash,id,stamp)]);
+   return json({token,roomId:id});
+  }
+  if(path.length===4&&path[0]==='rooms'&&path[2]==='invites'&&method==='DELETE'){
+   if(!await admin(db,request,path[1].toUpperCase(),env))return fail('Only a room admin can revoke invite links.',403);
+   await db.prepare('UPDATE room_invites SET revoked_at=? WHERE room_id=? AND revoked_at IS NULL').bind(now(),path[1].toUpperCase()).run();
+   return json({ok:true});
   }
   if(path[0]!=='rooms'||!path[1])return fail('Not found.',404);
   const id=path[1].toUpperCase(),room=await db.prepare('SELECT * FROM rooms WHERE id=? AND expires_at>?').bind(id,now()).first();if(!room)return fail('Room not found or expired.',404);
@@ -128,7 +159,9 @@ async function handleRequest({request,env}){
    return json({room:{...safeRoom(room,(members.results||[]).length),isYourRoom},member:{displayName:m?.display_name||'',role:isAdmin?'admin':'member',isCreator:room.creator_id===v||!!account&&room.creator_account_id===account.id,isMaster:master},messages:(messages.results||[]).reverse().map(x=>({id:x.id,senderId:x.sender_id,displayName:x.display_name,kind:x.kind,text:x.text,gifUrl:x.gif_url,createdAt:x.created_at,editedAt:x.edited_at||null,replyToId:x.reply_to_id||null,reactions:(reactionRows.results||[]).filter(r=>r.message_id===x.id).map(r=>({emoji:r.emoji,count:r.count})),role:x.is_admin?'admin':'member'})),members:(members.results||[]).map(x=>({visitorId:x.visitor_id,displayName:x.display_name,lastSeen:x.last_seen,role:x.is_admin||(isAdmin&&x.visitor_id===v)?'admin':'member',muted:!!x.muted,isCreator:x.visitor_id===room.creator_id})),activity:(activityRows.results||[]).reverse(),blocked:(blockedRows.results||[]).map(x=>({visitorId:x.visitor_id,createdAt:x.created_at}))});
   }
   if(path.length===3&&path[2]==='join'&&method==='POST'){
-   const b=await request.json(),v=visitor(request),credential=request.headers.get('X-Admin-Key')||'',joinMaster=master||!!env.MASTER_ADMIN_CODE&&credential===env.MASTER_ADMIN_CODE,account=await currentAccount(db,request),isOwner=!!account&&room.creator_account_id===account.id;if(!v)return fail('Browser identity is missing.');
+   const policyVersion='2026-10-11-v1',policyVisitor=visitor(request);
+   if(!policyVisitor||!await db.prepare('SELECT 1 FROM policy_acceptances WHERE visitor_id=? AND policy_version=?').bind(policyVisitor,policyVersion).first())return fail('Accept the current policies before joining a room.',428);
+   const b=await request.json(),v=visitor(request),credential=request.headers.get('X-Admin-Key')||'',joinMaster=master,account=await currentAccount(db,request),isOwner=!!account&&room.creator_account_id===account.id;if(!v)return fail('Browser identity is missing.');
    let credentialIsAdmin=false;if(!master&&!joinMaster&&credential){const adminRow=await db.prepare('SELECT key_hash FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,v).first();credentialIsAdmin=!!adminRow&&await digest(credential)===adminRow.key_hash}
    if(joinMaster){await db.prepare('DELETE FROM members WHERE room_id=? AND visitor_id=?').bind(id,v).run();return json({room:safeRoom(room),member:{displayName:'Master Admin',role:'admin',isCreator:false,isMaster:true},masterConsole:true})}
    if(!joinMaster&&await db.prepare('SELECT 1 FROM blocked WHERE room_id=? AND visitor_id=?').bind(id,v).first())return fail('You are blocked from this room.',403);
