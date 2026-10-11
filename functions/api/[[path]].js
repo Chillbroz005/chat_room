@@ -66,6 +66,11 @@ async function handleRequest({request,env}){
  try{
   const offeredMaster=request.headers.get('X-Master-Code')||'';if(offeredMaster&&!master){const ip=await digest(request.headers.get('CF-Connecting-IP')||visitor(request)),attempts=await db.prepare('SELECT COUNT(*) n FROM master_attempts WHERE visitor_id=? AND created_at>?').bind(ip,now()-900000).first();if((attempts?.n||0)>=5)return fail('Too many master-code attempts. Try again in 15 minutes.',429);await db.prepare('INSERT INTO master_attempts(visitor_id,created_at) VALUES(?,?)').bind(ip,now()).run()}
   await db.prepare('DELETE FROM rooms WHERE expires_at<=?').bind(now()).run();
+  if(path.length===1&&path[0]==='live'&&method==='GET'){
+   if(!env.REALTIME)return fail('Real-time service is not configured.',503);
+   const stub=env.REALTIME.get(env.REALTIME.idFromName('__global__'));
+   return stub.fetch(new Request('https://realtime/connect',request));
+  }
   if(path.length===1&&path[0]==='telegram-webhook'&&method==='POST')return await handleTelegramWebhook(request,env,db);
   if(path.length===1&&path[0]==='account'&&method==='GET'){const account=await currentAccount(db,request);return json({account:account?{username:account.username,avatar:account.avatar}:null})}
   if(path.length===2&&path[0]==='account'&&['signup','login'].includes(path[1])&&method==='POST'){
@@ -119,7 +124,13 @@ async function handleRequest({request,env}){
   }
   if(path[0]!=='rooms'||!path[1])return fail('Not found.',404);
   const id=path[1].toUpperCase(),room=await db.prepare('SELECT * FROM rooms WHERE id=? AND expires_at>?').bind(id,now()).first();if(!room)return fail('Room not found or expired.',404);
-  if(path.length===2&&method==='GET'){
+     if(path.length===3&&path[2]==='live'&&method==='GET'){
+    if(!env.REALTIME)return fail('Real-time service is not configured.',503);
+    const m=await member(db,request,id);if(!m)return fail('Join this room first.',403);
+    const stub=env.REALTIME.get(env.REALTIME.idFromName(id));
+    return stub.fetch(new Request('https://realtime/connect',request));
+   }
+if(path.length===2&&method==='GET'){
    const account=await currentAccount(db,request),isYourRoom=!!account&&room.creator_account_id===account.id;let m=await member(db,request,id);if(master&&m){await db.prepare('DELETE FROM members WHERE room_id=? AND visitor_id=?').bind(id,visitor(request)).run();m=null}if(!m&&!master){if(await db.prepare('SELECT 1 FROM blocked WHERE room_id=? AND visitor_id=?').bind(id,visitor(request)).first())return fail('You are blocked from this room.',403);return json({room:{...await publicRoom(db,id),isYourRoom}})}
    const isAdmin=await admin(db,request,id,env),v=visitor(request);if(m)await db.prepare('UPDATE members SET last_seen=? WHERE room_id=? AND visitor_id=?').bind(now(),id,v).run();
    const messageSql=master?'SELECT m.*,CASE WHEN a.visitor_id IS NULL THEN 0 ELSE 1 END AS is_admin FROM messages m LEFT JOIN room_admins a ON a.room_id=m.room_id AND a.visitor_id=m.sender_id WHERE m.room_id=? ORDER BY m.id':'SELECT m.*,CASE WHEN a.visitor_id IS NULL THEN 0 ELSE 1 END AS is_admin FROM messages m LEFT JOIN room_admins a ON a.room_id=m.room_id AND a.visitor_id=m.sender_id WHERE m.room_id=? ORDER BY m.id DESC LIMIT 150';
@@ -251,6 +262,12 @@ export async function onRequest({request,env}) {
  headers.set('X-Visitor-Id', id);
  const trustedRequest = new Request(request, {headers});
  const response = await handleRequest({request:trustedRequest,env});
+ if(response.ok&&env.REALTIME&&env.REALTIME_PUBLISH_SECRET&&['POST','PATCH','PUT','DELETE'].includes(request.method)){
+  const parts=new URL(request.url).pathname.split('/').filter(Boolean).slice(1),targets=[];
+  if(parts[0]==='rooms'&&parts[1])targets.push(parts[1].toUpperCase());
+  if(parts[0]==='rooms')targets.push('__global__');
+  await Promise.all(targets.map(async roomId=>{try{const stub=env.REALTIME.get(env.REALTIME.idFromName(roomId));await stub.fetch('https://realtime/publish',{method:'POST',headers:{'content-type':'application/json','x-husky-publish-secret':String(env.REALTIME_PUBLISH_SECRET)},body:JSON.stringify({type:'invalidate',roomId})})}catch(error){console.error('Realtime publish failed',error)}}));
+ }
  const responseHeaders = new Headers(response.headers);
  responseHeaders.set('X-Husky-Visitor-Id', id);
  responseHeaders.append('Set-Cookie', `__Host-husky-session=${id}.${signature}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
