@@ -135,7 +135,7 @@ async function handleRequest({request,env}){
   if(path.length===3&&path[2]==='username'&&method==='PATCH'){
    const v=visitor(request),m=await member(db,request,id);if(!m)return fail('Join this room first.',403);
    const b=await request.json(),displayName=trim(b.displayName,24);
-   if(displayName.length<2||/[\\u0000-\\u001f\\u007f]/.test(displayName))return fail('Username must be 2–24 characters and cannot contain control characters.');
+   if(displayName.length<2||/[\u0000-\u001f\u007f]/.test(displayName))return fail('Username must be 2–24 characters and cannot contain control characters.');
    const [taken,reserved]=await Promise.all([
     db.prepare('SELECT 1 FROM members WHERE room_id=? AND visitor_id<>? AND display_name=? COLLATE NOCASE LIMIT 1').bind(id,v,displayName).first(),
     db.prepare('SELECT 1 FROM room_usernames WHERE room_id=? AND visitor_id<>? AND display_name=? COLLATE NOCASE LIMIT 1').bind(id,v,displayName).first()
