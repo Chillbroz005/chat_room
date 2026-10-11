@@ -112,3 +112,23 @@ $('chat-search').addEventListener('input',e=>{chatSearch=e.target.value.trim();i
 $('clear-chat-search').onclick=()=>{$('chat-search').value='';chatSearch='';if(activeRoom)syncRoom()};
 $('reply-cancel').onclick=()=>{replyToMessageId=null;$('reply-status').hidden=true;$('reply-cancel').hidden=true;$('message-input').placeholder='Write a message… (255 characters)'};
 $('message-input').addEventListener('input',()=>{updateCount();const v=$('message-input').value;updateTyping(!!v.trim());if(v.includes('@')&&activeRoom){const names=[...document.querySelectorAll('#member-list .member')].map(x=>x.querySelector('span')?.textContent?.split(' ·')[0]).filter(Boolean);$('member-mentions').innerHTML=names.map(n=>'<option value="'+esc('@'+n)+'"></option>').join('')}});
+
+
+// R-09: Best-effort protection against copying chat message content.
+(function protectMessageCopy(){
+  const inMessage = node => node instanceof Element ? node.closest('#messages .message') : null;
+  document.addEventListener('copy', e => {
+    const sel = window.getSelection();
+    if ((sel && sel.rangeCount && (inMessage(sel.anchorNode?.parentElement) || inMessage(sel.focusNode?.parentElement))) || inMessage(e.target)) {
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('cut', e => { if (inMessage(e.target)) e.preventDefault(); }, true);
+  document.addEventListener('contextmenu', e => { if (inMessage(e.target)) e.preventDefault(); }, true);
+  document.addEventListener('selectstart', e => { if (inMessage(e.target)) e.preventDefault(); }, true);
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || !['c','x'].includes(e.key.toLowerCase())) return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && (inMessage(sel.anchorNode?.parentElement) || inMessage(sel.focusNode?.parentElement))) e.preventDefault();
+  }, true);
+})();
