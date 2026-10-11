@@ -720,10 +720,27 @@ button:disabled, .btn:disabled, .tool:disabled {
     }
   </style>
 
+
+  <style id="account-next-to-layout-fix">
+    .appearance-controls{display:flex;align-items:center;gap:7px;min-width:0}
+    .appearance-controls #design-select{width:auto;min-width:110px}
+    .appearance-controls #account-button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
+    @media(max-width:760px){
+      .top-actions{align-items:center}
+      .appearance-controls{flex:1 1 100%;flex-wrap:wrap}
+      .appearance-controls #account-button{flex:0 1 auto;max-width:100%}
+    }
+    @media(max-width:380px){
+      .appearance-controls{gap:5px}
+      .appearance-controls #design-select{min-width:92px;max-width:115px}
+      .appearance-controls #account-button{max-width:calc(100% - 190px)}
+    }
+  </style>
+
 </head>
 <body>
 <div class="shell">
-  <header><div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" focusable="false"><path d="M8 13.5A7.5 7.5 0 0 1 15.5 6h13A7.5 7.5 0 0 1 36 13.5v8A7.5 7.5 0 0 1 28.5 29H20l-8 6v-7.4a7.5 7.5 0 0 1-4-6.1z" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linejoin="round"/><path d="M17 14c2 2 2 5 0 7m5-10c4 3 4 10 0 13m5-10c2 2 2 5 0 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span>husky<small class="brand-tag">anonymous chat</small></span></div><div class="header-disclaimer"><strong>Disclaimer:</strong> Shared content is the user&#8217;s responsibility, not the room creator&#8217;s.</div><div class="top-actions"><div class="appearance-controls"><button type="button" class="tool" id="theme-toggle" aria-label="Switch to dark mode">☾ Dark</button><select class="input" id="design-select" aria-label="Choose site design"><option value="classic">Classic</option><option value="studio">Studio</option><option value="horizon">Horizon</option></select></div><span class="status" id="connection" hidden>Connecting…</span><button type="button" class="status account-status" id="account-button" aria-label="Account settings"><span id="account-avatar">👤</span><span id="account-label">Connecting…</span></button><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
+  <header><div class="brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" focusable="false"><path d="M8 13.5A7.5 7.5 0 0 1 15.5 6h13A7.5 7.5 0 0 1 36 13.5v8A7.5 7.5 0 0 1 28.5 29H20l-8 6v-7.4a7.5 7.5 0 0 1-4-6.1z" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linejoin="round"/><path d="M17 14c2 2 2 5 0 7m5-10c4 3 4 10 0 13m5-10c2 2 2 5 0 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span><span>husky<small class="brand-tag">anonymous chat</small></span></div><div class="header-disclaimer"><strong>Disclaimer:</strong> Shared content is the user&#8217;s responsibility, not the room creator&#8217;s.</div><div class="top-actions"><div class="appearance-controls"><button type="button" class="tool" id="theme-toggle" aria-label="Switch to dark mode">☾ Dark</button><select class="input" id="design-select" aria-label="Choose site design"><option value="classic">Classic</option><option value="studio">Studio</option><option value="horizon">Horizon</option></select><button type="button" class="status account-status" id="account-button" aria-label="Account settings"><span id="account-avatar">👤</span><span id="account-label">Connecting…</span></button></div><span class="status" id="connection" hidden>Connecting…</span><button class="btn secondary small" id="home-button" hidden>Home</button></div></header>
   <section class="view active" id="home-view">
     <div class="horizon-hero"><div><span>HUSKY · TEMPORARY CHAT ROOMS</span><h1>Good conversations, <em>no account needed.</em></h1><p>Create a room for your people or join one with a code.</p></div><strong>Private by default <i>·</i> Disappears on a timer</strong></div>
     <div class="cards">
