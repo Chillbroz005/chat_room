@@ -156,6 +156,7 @@ async function handleRequest({request,env}){
   if(path.length===3&&path[2]==='join'&&method==='POST'){
    const b=await request.json(),v=visitor(request),credential=request.headers.get('X-Admin-Key')||'',joinMaster=master||!!env.MASTER_ADMIN_CODE&&credential===env.MASTER_ADMIN_CODE,account=await currentAccount(db,request),isOwner=!!account&&room.creator_account_id===account.id;
    const suppliedInvite=trim(b.inviteToken,128),inviteRow=suppliedInvite?await db.prepare('SELECT key_hash FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,'__invite_token__').first():null,inviteAuthorized=!!inviteRow&&constantTimeEqual(await digest(suppliedInvite),inviteRow.key_hash);
+   if(suppliedInvite&&!inviteAuthorized)return fail('This invite link has been revoked or expired.',403);
    if(!v)return fail('Browser identity is missing.');
    let credentialIsAdmin=false;if(!master&&!joinMaster&&credential){const adminRow=await db.prepare('SELECT key_hash FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,v).first();credentialIsAdmin=!!adminRow&&await digest(credential)===adminRow.key_hash}
    if(joinMaster){await db.prepare('DELETE FROM members WHERE room_id=? AND visitor_id=?').bind(id,v).run();return json({room:safeRoom(room),member:{displayName:'Master Admin',role:'admin',isCreator:false,isMaster:true},masterConsole:true})}
