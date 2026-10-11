@@ -561,6 +561,27 @@ button:disabled, .btn:disabled, .tool:disabled {
       #room-view.active .composer-picker{left:8px;right:8px;bottom:8px;height:58dvh;max-height:58dvh}
     }
   </style>
+
+  <style>
+    /* Mobile: keep every active-room column reachable without clipping. */
+    @media (max-width: 760px) {
+      .room-table-wrap {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto !important;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+      }
+      .room-table {
+        min-width: 760px !important;
+        width: 760px !important;
+        table-layout: auto !important;
+      }
+      .room-table th, .room-table td {
+        overflow-wrap: normal;
+      }
+    }
+  </style>
 </head>
 <body>
 <div class="shell">
