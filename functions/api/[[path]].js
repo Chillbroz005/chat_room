@@ -129,7 +129,15 @@ async function handleRequest({request,env}){
   }
   if(path.length===3&&path[2]==='invite'&&method==='GET'){
    if(!await admin(db,request,id,env))return fail('Only a room admin can generate an invite link.',403);
-   const inviteToken=await sessionSignature(`${id}:${room.created_at}:husky-invite-v1`,String(env.SESSION_SECRET));
+   const supplied=trim(new URL(request.url).searchParams.get('token'),128),saved=await db.prepare('SELECT key_hash FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,'__invite_token__').first();
+   if(!supplied||!saved||!constantTimeEqual(await digest(supplied),saved.key_hash))return fail('This invite link is no longer valid. Generate a new one.',404);
+   return json({inviteToken:supplied});
+  }
+  if(path.length===3&&path[2]==='invite'&&method==='POST'){
+   if(!await admin(db,request,id,env))return fail('Only a room admin can generate an invite link.',403);
+   const inviteToken=code(32);
+   await db.prepare('INSERT OR REPLACE INTO room_admins(room_id,visitor_id,key_hash) VALUES(?,?,?)').bind(id,'__invite_token__',await digest(inviteToken)).run();
+   await activity(db,id,'A room invite link was generated or regenerated');
    return json({inviteToken});
   }
   if(path.length===3&&path[2]==='username'&&method==='PATCH'){
@@ -147,7 +155,7 @@ async function handleRequest({request,env}){
   }
   if(path.length===3&&path[2]==='join'&&method==='POST'){
    const b=await request.json(),v=visitor(request),credential=request.headers.get('X-Admin-Key')||'',joinMaster=master||!!env.MASTER_ADMIN_CODE&&credential===env.MASTER_ADMIN_CODE,account=await currentAccount(db,request),isOwner=!!account&&room.creator_account_id===account.id;
-   const suppliedInvite=trim(b.inviteToken,128),expectedInvite=await sessionSignature(`${id}:${room.created_at}:husky-invite-v1`,String(env.SESSION_SECRET)),inviteAuthorized=!!suppliedInvite&&constantTimeEqual(suppliedInvite,expectedInvite);
+   const suppliedInvite=trim(b.inviteToken,128),inviteRow=suppliedInvite?await db.prepare('SELECT key_hash FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,'__invite_token__').first():null,inviteAuthorized=!!inviteRow&&constantTimeEqual(await digest(suppliedInvite),inviteRow.key_hash);
    if(!v)return fail('Browser identity is missing.');
    let credentialIsAdmin=false;if(!master&&!joinMaster&&credential){const adminRow=await db.prepare('SELECT key_hash FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,v).first();credentialIsAdmin=!!adminRow&&await digest(credential)===adminRow.key_hash}
    if(joinMaster){await db.prepare('DELETE FROM members WHERE room_id=? AND visitor_id=?').bind(id,v).run();return json({room:safeRoom(room),member:{displayName:'Master Admin',role:'admin',isCreator:false,isMaster:true},masterConsole:true})}
@@ -195,7 +203,7 @@ async function handleRequest({request,env}){
    if(!await admin(db,request,id,env))return fail('Only the room admin can nominate admins.',403);const b=await request.json(),target=String(b.targetId||''),m=await db.prepare('SELECT display_name FROM members WHERE room_id=? AND visitor_id=?').bind(id,target).first();if(!m)return fail('That member is no longer in the room.');const key=code(8);await db.prepare('INSERT OR REPLACE INTO room_admins(room_id,visitor_id,key_hash) VALUES(?,?,?)').bind(id,target,await digest(key)).run();await activity(db,id,`${m.display_name} was made an admin`);return json({adminKey:key,displayName:m.display_name});
   }
   if(path.length===4&&path[2]==='admins'&&method==='DELETE'){
-   if(!await admin(db,request,id,env))return fail('Only a room admin can change admin roles.',403);const target=decodeURIComponent(path[3]);if(target===room.creator_id)return fail('The room creator cannot be demoted.',400);const row=await db.prepare('SELECT display_name FROM members WHERE room_id=? AND visitor_id=?').bind(id,target).first();if(!row)return fail('That member is no longer in the room.');const assigned=await db.prepare('SELECT 1 FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,target).first();if(!assigned)return fail('That member is not an admin.');const count=await db.prepare('SELECT COUNT(*) n FROM room_admins WHERE room_id=?').bind(id).first();if((count?.n||0)<=1)return fail('The last room admin cannot be demoted.',400);await db.prepare('DELETE FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,target).run();await activity(db,id,`${row.display_name} was demoted from admin`);return json({ok:true});
+   if(!await admin(db,request,id,env))return fail('Only a room admin can change admin roles.',403);const target=decodeURIComponent(path[3]);if(target===room.creator_id)return fail('The room creator cannot be demoted.',400);const row=await db.prepare('SELECT display_name FROM members WHERE room_id=? AND visitor_id=?').bind(id,target).first();if(!row)return fail('That member is no longer in the room.');const assigned=await db.prepare('SELECT 1 FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,target).first();if(!assigned)return fail('That member is not an admin.');const count=await db.prepare("SELECT COUNT(*) n FROM room_admins WHERE room_id=? AND visitor_id!='__invite_token__'").bind(id).first();if((count?.n||0)<=1)return fail('The last room admin cannot be demoted.',400);await db.prepare('DELETE FROM room_admins WHERE room_id=? AND visitor_id=?').bind(id,target).run();await activity(db,id,`${row.display_name} was demoted from admin`);return json({ok:true});
   }
   if(path.length===3&&path[2]==='mute'&&method==='POST'){
    if(!await admin(db,request,id,env))return fail('Only the room admin can mute members.',403);const b=await request.json(),target=String(b.targetId||'');if(!target)return fail('Choose a member.');const m=await db.prepare('SELECT display_name FROM members WHERE room_id=? AND visitor_id=?').bind(id,target).first();if(!m)return fail('That member is not in the room.');await db.prepare('INSERT OR IGNORE INTO muted(room_id,visitor_id,created_at) VALUES(?,?,?)').bind(id,target,now()).run();await activity(db,id,`${m.display_name} was muted`);return json({ok:true});
