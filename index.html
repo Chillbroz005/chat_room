@@ -810,5 +810,18 @@ button:disabled, .btn:disabled, .tool:disabled {
   .policy-modal .policy-actions .btn{display:flex!important;visibility:visible!important;opacity:1!important;width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;max-height:none!important;align-self:stretch!important}
 }
 </style>
+
+<style id="r09-prevent-message-copy">
+/* Best-effort deterrent: browser apps cannot reliably block OS screenshots. */
+#messages .message .bubble-content,
+#messages .message .msg-name,
+#messages .message .reply-preview,
+#messages .message .msg-time,
+#messages .message .message-reactions,
+#messages .message .bubble-content * {
+  -webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;
+}
+@media print { body { display:none!important; } }
+</style>
 </body>
 </html>
