@@ -266,7 +266,7 @@ export async function onRequest({request,env}) {
  if(response.ok&&env.REALTIME&&env.REALTIME_PUBLISH_SECRET&&['POST','PATCH','PUT','DELETE'].includes(request.method)){
   const parts=new URL(request.url).pathname.split('/').filter(Boolean).slice(1),targets=[];
   if(parts[0]==='rooms'&&parts[1])targets.push(parts[1].toUpperCase());
-  if(parts[0]==='rooms')targets.push('__global__');
+  if(parts[0]==='rooms'&&(!parts[1]||(request.method==='DELETE'&&parts.length===2)||['join','leave','settings','block','unblock','admins','blocked'].includes(parts[2])))targets.push('__global__');
   await Promise.all(targets.map(async roomId=>{try{const stub=env.REALTIME.get(env.REALTIME.idFromName(roomId));await stub.fetch('https://realtime/publish',{method:'POST',headers:{'content-type':'application/json','x-husky-publish-secret':String(env.REALTIME_PUBLISH_SECRET)},body:JSON.stringify({type:'invalidate',roomId})})}catch(error){console.error('Realtime publish failed',error)}}));
  }
  const responseHeaders = new Headers(response.headers);
