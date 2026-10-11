@@ -693,6 +693,33 @@ button:disabled, .btn:disabled, .tool:disabled {
     }
   </style>
 
+
+  <style id="mobile-rooms-account-studio-fix">
+    @media(max-width:760px){
+      #home-view.active{display:block!important;min-width:0}
+      #home-view .cards{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%!important;max-width:none!important;min-width:0!important;gap:14px}
+      #home-view .cards>.card{width:100%!important;min-width:0!important;max-width:none!important}
+      #home-view .rooms-wrap{display:block!important;grid-column:1!important;width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:16px 12px!important}
+      #home-view .rooms-wrap .section-title,#home-view .rooms-wrap .room-filters{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:8px;min-width:0}
+      #home-view .rooms-wrap .room-list{display:block!important;width:100%!important;min-width:0!important;height:auto!important;max-height:none!important;overflow:visible!important}
+      #home-view .rooms-wrap .room-table-wrap{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch}
+      #home-view .rooms-wrap .room-table{width:760px!important;min-width:760px!important;table-layout:auto!important}
+      #home-view .rooms-wrap .room-table th,#home-view .rooms-wrap .room-table td{white-space:normal;overflow-wrap:normal}
+      header{min-width:0;flex-wrap:wrap;gap:10px}
+      .brand{min-width:0;flex:0 1 auto}
+      .top-actions{min-width:0;max-width:100%;flex:1 1 100%;display:flex!important;flex-wrap:wrap!important;align-items:center;gap:7px}
+      #account-button{min-width:0;max-width:calc(100% - 120px);flex:1 1 120px;display:inline-flex;align-items:center;gap:6px;overflow:hidden}
+      #account-label{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #home-button,#theme-toggle,#design-select{flex:0 0 auto;max-width:100%}
+    }
+    @media(max-width:380px){
+      #home-view .rooms-wrap{padding:12px 8px!important}
+      #home-view .rooms-wrap .room-filters{grid-template-columns:minmax(0,1fr)!important}
+      .top-actions{gap:5px}
+      #account-button{max-width:calc(100% - 100px)}
+    }
+  </style>
+
 </head>
 <body>
 <div class="shell">
