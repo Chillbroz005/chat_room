@@ -93,7 +93,24 @@ async function handleRequest({request,env}){
    await db.prepare('DELETE FROM browser_accounts WHERE visitor_id=?').bind(v).run();await db.prepare('INSERT INTO browser_accounts(visitor_id,account_id,linked_at) VALUES(?,?,?)').bind(v,account.id,now()).run();await db.prepare('UPDATE members SET display_name=? WHERE visitor_id=?').bind(account.username,v).run();await db.prepare('UPDATE messages SET display_name=? WHERE sender_id=?').bind(account.username,v).run();await db.prepare('UPDATE rooms SET creator_name=? WHERE creator_id=?').bind(account.username,v).run();return json({account:{username:account.username,avatar:account.avatar}},action==='signup'?201:200)
   }
   if(path.length===2&&path[0]==='account'&&path[1]==='logout'&&method==='POST'){await db.prepare('DELETE FROM browser_accounts WHERE visitor_id=?').bind(visitor(request)).run();return json({ok:true})}
-  if(path.length===2&&path[0]==='account'&&path[1]==='profile'&&method==='POST'){const account=await currentAccount(db,request);if(!account)return fail('Log in first.',401);const b=await request.json(),avatar=String(b.avatar||'');if(!accountAvatars.includes(avatar))return fail('Choose a supported profile icon.');await db.prepare('UPDATE accounts SET avatar=? WHERE id=?').bind(avatar,account.id).run();return json({account:{username:account.username,avatar}})}
+  if(path.length===2&&path[0]==='account'&&path[1]==='profile'&&method==='POST'){
+   const account=await currentAccount(db,request);if(!account)return fail('Log in first.',401);
+   const b=await request.json(),avatar=String(b.avatar||account.avatar||'🐺'),username=trim(b.username,24);
+   if(!accountAvatars.includes(avatar))return fail('Choose a supported profile icon.');
+   if(username&&(!/^[A-Za-z0-9_]{3,24}$/.test(username)))return fail('Use 3–24 letters, numbers or underscores for the username.');
+   if(username&&username.toLowerCase()!==account.username.toLowerCase()){
+    const duplicate=await db.prepare('SELECT 1 FROM accounts WHERE username=? COLLATE NOCASE AND id!=?').bind(username,account.id).first();
+    if(duplicate)return fail('That username is already taken.',409);
+    const v=visitor(request);
+    await db.batch([
+     db.prepare('UPDATE accounts SET username=?,avatar=? WHERE id=?').bind(username,avatar,account.id),
+     db.prepare('UPDATE members SET display_name=? WHERE visitor_id=?').bind(username,v),
+     db.prepare('UPDATE messages SET display_name=? WHERE sender_id=?').bind(username,v),
+     db.prepare('UPDATE rooms SET creator_name=? WHERE creator_account_id=?').bind(username,account.id)
+    ]);
+   }else await db.prepare('UPDATE accounts SET avatar=? WHERE id=?').bind(avatar,account.id).run();
+   return json({account:{username:username||account.username,avatar}});
+  }
   if(path.length===1&&path[0]==='policy'&&method==='GET'){
    const v=visitor(request),version='2026-10-11-v1';
    const accepted=!!v&&!!await db.prepare('SELECT 1 FROM policy_acceptances WHERE visitor_id=? AND policy_version=?').bind(v,version).first();
