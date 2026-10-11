@@ -24,7 +24,6 @@ A lightweight, temporary chat-room web app built on **Cloudflare Pages Functions
 | Frontend | HTML, CSS, JavaScript |
 | Serverless API | Cloudflare Pages Functions |
 | Live updates | Cloudflare Durable Objects + WebSockets |
-| Live updates | Cloudflare Durable Objects + WebSockets |
 | Database | Cloudflare D1 (SQLite) |
 | GIF and sticker search | GIPHY API |
 | Optional notifications and replies | Telegram Bot API |
