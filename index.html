@@ -810,5 +810,45 @@ button:disabled, .btn:disabled, .tool:disabled {
   .policy-modal .policy-actions .btn{display:flex!important;visibility:visible!important;opacity:1!important;width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;max-height:none!important;align-self:stretch!important}
 }
 </style>
+
+<style id="r10-brave-policy-agree-fix">
+/* Keep both consent choices in a stable, visible row across Chromium browsers. */
+.policy-modal .policy-actions{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  align-items:stretch!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:visible!important;
+  isolation:isolate;
+}
+.policy-modal .policy-actions #policy-decline,
+.policy-modal .policy-actions #policy-accept{
+  display:flex!important;
+  position:relative!important;
+  inset:auto!important;
+  float:none!important;
+  flex:none!important;
+  grid-row:1!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  min-height:48px!important;
+  height:auto!important;
+  max-height:none!important;
+  visibility:visible!important;
+  opacity:1!important;
+  transform:none!important;
+  clip:auto!important;
+  clip-path:none!important;
+  overflow:visible!important;
+  z-index:10!important;
+  align-items:center!important;
+  justify-content:center!important;
+  white-space:normal!important;
+}
+.policy-modal .policy-actions #policy-decline{grid-column:1!important}
+.policy-modal .policy-actions #policy-accept{grid-column:2!important}
+</style>
 </body>
 </html>
