@@ -262,6 +262,7 @@ export async function onRequest({request,env}) {
  headers.set('X-Visitor-Id', id);
  const trustedRequest = new Request(request, {headers});
  const response = await handleRequest({request:trustedRequest,env});
+ if(response.status===101)return response;
  if(response.ok&&env.REALTIME&&env.REALTIME_PUBLISH_SECRET&&['POST','PATCH','PUT','DELETE'].includes(request.method)){
   const parts=new URL(request.url).pathname.split('/').filter(Boolean).slice(1),targets=[];
   if(parts[0]==='rooms'&&parts[1])targets.push(parts[1].toUpperCase());
