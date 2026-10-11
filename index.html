@@ -582,6 +582,117 @@ button:disabled, .btn:disabled, .tool:disabled {
       }
     }
   </style>
+
+  <style id="responsive-rooms-header-fix">
+    /* Keep the active-room table reachable; its parent was clipping horizontal overflow. */
+    @media (max-width: 1100px) {
+      .rooms-wrap { min-width: 0; overflow: visible !important; }
+      .rooms-wrap .room-list {
+        display: block !important;
+        min-width: 0;
+        max-height: none !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      .room-table-wrap {
+        display: block !important;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      .room-table {
+        width: 760px !important;
+        min-width: 760px !important;
+        table-layout: auto !important;
+      }
+    }
+    /* One compact top row for appearance, Guest/account and Home in every theme. */
+    @media (max-width: 760px) {
+      header {
+        display: flex !important;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      header .brand { flex: 0 0 auto; min-width: 0; gap: 6px; font-size: 18px; }
+      header .mark { width: 30px; height: 30px; flex: 0 0 30px; }
+      header .brand-tag { display: none !important; }
+      header .top-actions {
+        display: flex !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        width: auto;
+        align-items: center;
+        justify-content: flex-end !important;
+        flex-wrap: nowrap !important;
+        gap: 4px !important;
+        margin: 0 !important;
+      }
+      header .appearance-controls {
+        display: flex !important;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 4px !important;
+      }
+      header .appearance-controls .tool {
+        padding: 6px !important;
+        font-size: 11px !important;
+        white-space: nowrap;
+      }
+      header .appearance-controls select {
+        width: 82px !important;
+        min-width: 0 !important;
+        max-width: 82px;
+        padding: 6px 3px !important;
+        font-size: 11px !important;
+      }
+      header .account-status {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 3px;
+        min-width: 0;
+        max-width: 72px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-size: 11px !important;
+        padding: 6px 4px !important;
+      }
+      header .account-status #account-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      header #home-button { flex: 0 0 auto; padding: 6px 7px !important; font-size: 11px !important; white-space: nowrap; }
+      header .header-disclaimer {
+        order: 3;
+        flex: 1 0 100%;
+        grid-column: auto !important;
+        grid-row: auto !important;
+        width: 100%;
+        max-width: none;
+        white-space: normal;
+        text-align: left;
+        font-size: 10px;
+        padding: 6px 8px;
+      }
+      .rooms-wrap { display: block !important; grid-column: auto !important; padding: 14px !important; }
+      .rooms-wrap .room-filters { grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important; }
+      .rooms-wrap .room-list { width: 100%; max-height: none !important; }
+      .room-table th, .room-table td { white-space: normal; }
+    }
+    @media (max-width: 380px) {
+      header .brand { font-size: 16px; }
+      header .mark { width: 27px; height: 27px; flex-basis: 27px; }
+      header .appearance-controls select { width: 72px !important; max-width: 72px; }
+      header .appearance-controls .tool { font-size: 10px !important; }
+      header .account-status { max-width: 60px; }
+    }
+  </style>
+
 </head>
 <body>
 <div class="shell">
