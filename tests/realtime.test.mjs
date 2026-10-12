@@ -41,3 +41,15 @@ test('room header displays the active username and invite opens the share dialog
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="current-room-username"/);
 });
+
+
+test('Telegram reply parser accepts creator alerts, explicit commands, and plain-text fallback', () => {
+  assert.ok(api.includes("function parseTelegramReply(message,fallbackRoomId=''"));
+  assert.ok(api.includes("if(fallbackRoomId)return {roomId:fallbackRoomId,text}"));
+  assert.ok(api.includes("TELEGRAM_CREATOR_USER_ID does not match your Telegram numeric user ID"));
+});
+
+test('plain Telegram replies publish realtime invalidation for the most recently alerted active room', () => {
+  assert.ok(api.includes("a.text='@creator Telegram alert sent'"));
+  assert.ok(api.includes("if(!roomId&&text&&!text.startsWith('/')"));
+});
