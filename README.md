@@ -23,6 +23,7 @@ A lightweight, temporary chat-room web app built on **Cloudflare Pages Functions
 | --- | --- |
 | Frontend | HTML, CSS, JavaScript |
 | Serverless API | Cloudflare Pages Functions |
+| Live updates | Cloudflare Durable Objects + WebSockets |
 | Database | Cloudflare D1 (SQLite) |
 | GIF and sticker search | GIPHY API |
 | Optional notifications and replies | Telegram Bot API |
@@ -32,15 +33,18 @@ A lightweight, temporary chat-room web app built on **Cloudflare Pages Functions
 ```text
 Browser
   ├── Static UI and chat interactions
+  ├── WebSocket /api/live and /api/rooms/:id/live
+  │      └── Durable Object WebSocket hub (husky-realtime)
   └── /api/* requests
          └── Cloudflare Pages Functions
                 ├── Signed browser-session identity
                 ├── Room and moderation API
+                ├── Publish invalidation events to the WebSocket hub
                 ├── Telegram webhook integration
                 └── Cloudflare D1
 ```
 
-The client polls for chat updates every 10 seconds. The application does not use Firebase.
+The client uses WebSockets for room and room-list invalidation; it does not periodically poll for chat updates. A small separate Durable Object Worker (`husky-realtime`) holds the WebSocket connections and broadcasts invalidation events after successful API mutations. The application does not use Firebase.
 
 ## Deployment
 
@@ -146,7 +150,7 @@ Then open `http://localhost:8000`. This simple server does not run Cloudflare Pa
 - **Room passwords:** stored as salted PBKDF2 hashes. Keep administrator credentials private.
 - **GIPHY:** GIF/sticker search uses the GIPHY API from the browser. Treat its API key as a public-client credential, not a secret. Review [GIPHY API documentation](https://developers.giphy.com/docs/api/) and [rate/fee details](https://support.giphy.com/hc/en-us/articles/10389869671322-Is-there-a-fee-for-using-GIPHY-s-API).
 - **API rate limits:** room creation is limited to 5 per browser and 10 per IP in 15 minutes; message posting is limited to 30 per browser per room and 90 per IP per room per minute. These are D1-backed rolling windows, and hashed identifiers are stored. Apply migration `0009_api_rate_limits.sql` before deploying code that uses these limits.
-- **Polling and quotas:** the 10-second polling interval can generate about 8,640 requests per continuously active browser per day, before other actions. Review Cloudflare limits and adjust polling if usage grows.
+- **Realtime deployment:** From the repository root, run `npx wrangler deploy --config wrangler.realtime.toml`. In Cloudflare Pages settings, add a Durable Object binding named `REALTIME` pointing to class `RoomRealtime` in Worker script `husky-realtime`. Set the same random `REALTIME_PUBLISH_SECRET` (at least 32 characters) as a secret in both Pages and the Worker. The Worker uses the Durable Objects migration in `wrangler.realtime.toml`. WebSocket updates require this binding; the app intentionally has no polling fallback.
 - **Privacy and conduct:** the in-app notice is a user-facing reminder, not a substitute for a complete privacy policy, terms of service, or legal review.
 - **Message deletion:** authors cannot delete their own messages. Room admins can delete messages; deleted message contents are not retained in the activity log.
 

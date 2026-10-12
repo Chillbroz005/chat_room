@@ -1,0 +1,7 @@
+name = "husky-realtime"
+main = "realtime-worker.js"
+compatibility_date = "2026-10-12"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomRealtime"]
