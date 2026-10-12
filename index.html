@@ -850,5 +850,27 @@ button:disabled, .btn:disabled, .tool:disabled {
 .policy-modal .policy-actions #policy-decline{grid-column:1!important}
 .policy-modal .policy-actions #policy-accept{grid-column:2!important}
 </style>
+
+<style id="r24-room-username-alignment">
+  /* Keep the room role, current username and edit control aligned together. */
+  #room-view .room-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+  #room-view .room-heading h1{margin:0;font-size:18px}
+  #room-view .room-heading p{margin:0}
+  #room-view .room-heading .role-badge{margin:0;white-space:nowrap}
+  #room-view .room-username-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;margin:0}
+  #room-view #current-room-username{display:inline-flex;align-items:center;min-width:0;margin:0;white-space:nowrap;font-weight:700;line-height:1.3}
+  #room-view #edit-room-name{flex:0 0 auto;white-space:nowrap}
+  #room-view #room-username-editor{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:min(100%,460px);max-width:460px;min-width:0}
+  #room-view #room-username-editor[hidden]{display:none!important}
+  #room-view #room-username-input{flex:1 1 180px;width:220px;min-width:0;max-width:260px;height:40px;padding:9px 11px;box-sizing:border-box}
+  #room-view #room-username-editor button{flex:0 0 auto;white-space:nowrap}
+  #room-view #room-username-editor .note{flex:1 0 100%;margin:0}
+  @media(max-width:760px){
+    #room-view .room-username-tools{gap:7px}
+    #room-view #room-username-editor{width:100%;max-width:100%;flex-wrap:wrap}
+    #room-view #room-username-input{flex:1 1 100%;width:100%;max-width:none}
+  }
+</style>
+
 </body>
 </html>
