@@ -36,7 +36,8 @@ test('Telegram replies publish a room invalidation for connected WebSocket clien
 
 test('room header displays the active username and invite opens the share dialog', async () => {
   assert.match(app, /current-room-username/);
-  assert.match(app, /\$\('copy-invite'\)\.onclick=\(\)=>\{if\(!activeRoom/);\n  assert.match(app, /openRoomShare\(activeRoom\)/);
+  assert.match(app, /\$\('copy-invite'\)\.onclick=\(\)=>\{if\(!activeRoom/);
+  assert.match(app, /openRoomShare\(activeRoom\)/);
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="current-room-username"/);
 });
