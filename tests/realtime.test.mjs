@@ -26,3 +26,17 @@ test('successful mutations publish invalidation events through the Durable Objec
   assert.match(worker, /this\.state\.getWebSockets\(\)/);
   assert.match(worker, /constantTimeEqual\(expected, supplied\)/);
 });
+
+
+test('Telegram replies publish a room invalidation for connected WebSocket clients', () => {
+  assert.match(api, /parts\[0\]==='telegram-webhook'&&request\.method==='POST'/);
+  assert.match(api, /request\.clone\(\)\.json\(\)/);
+  assert.match(api, /targets\.push\(roomId\)/);
+});
+
+test('room header displays the active username and invite opens the share dialog', async () => {
+  assert.match(app, /current-room-username/);
+  assert.match(app, /\$\('copy-invite'\)\.onclick=\(\)=>\{[^}]*openRoomShare\(activeRoom\)/);
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="current-room-username"/);
+});
