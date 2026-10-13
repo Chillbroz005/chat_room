@@ -75,7 +75,7 @@ async function handleTelegramStatus(request,env,db){
  return json({ok:true,config,telegram,diagnostics:recent.results||[]});
 }
 async function handleTelegramResync(request,env,db){
- const supplied=new URL(request.url).searchParams.get('key')||'';
+ const supplied=request.headers.get('X-Telegram-Resync-Key')||'';
  if(!env.TELEGRAM_RESYNC_KEY||!constantTimeEqual(supplied,String(env.TELEGRAM_RESYNC_KEY)))return fail('Not found.',404);
  if(!env.TELEGRAM_BOT_TOKEN||!env.TELEGRAM_WEBHOOK_SECRET)return fail('Telegram webhook settings are incomplete.',503);
  const webhookUrl=new URL('/api/telegram-webhook',request.url).toString();
