@@ -74,6 +74,21 @@ async function handleTelegramStatus(request,env,db){
  const recent=await db.prepare('SELECT created_at,update_id,stage,reason,update_type,chat_matches,sender_matches,text_length,has_reply_to_message FROM telegram_webhook_diagnostics ORDER BY created_at DESC LIMIT 25').all();
  return json({ok:true,config,telegram,diagnostics:recent.results||[]});
 }
+async function handleTelegramResync(request,env,db){
+ const supplied=new URL(request.url).searchParams.get('key')||'';
+ if(!env.TELEGRAM_RESYNC_KEY||!constantTimeEqual(supplied,String(env.TELEGRAM_RESYNC_KEY)))return fail('Not found.',404);
+ if(!env.TELEGRAM_BOT_TOKEN||!env.TELEGRAM_WEBHOOK_SECRET)return fail('Telegram webhook settings are incomplete.',503);
+ const webhookUrl=new URL('/api/telegram-webhook',request.url).toString();
+ try{
+  const response=await fetch('https://api.telegram.org/bot'+env.TELEGRAM_BOT_TOKEN+'/setWebhook',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:webhookUrl,secret_token:String(env.TELEGRAM_WEBHOOK_SECRET),allowed_updates:['message'],drop_pending_updates:false})});
+  const payload=await response.json();
+  if(!response.ok||!payload?.ok)return fail('Telegram rejected the webhook sync: '+String(payload?.description||'unknown API error').slice(0,150),502);
+  await recordTelegramDiagnostic(db,env,null,'webhook_sync','set_webhook_succeeded');
+  let info={};
+  try{const check=await fetch('https://api.telegram.org/bot'+env.TELEGRAM_BOT_TOKEN+'/getWebhookInfo');const data=await check.json();if(check.ok&&data?.ok)info=data.result||{}}catch{}
+  return json({ok:true,urlMatchesExpected:info.url===webhookUrl,pendingUpdateCount:info.pending_update_count??null,lastErrorMessage:String(info.last_error_message||'').slice(0,200)||null,allowedUpdates:info.allowed_updates??null,pendingUpdatesPreserved:true});
+ }catch{return fail('Could not synchronize the Telegram webhook. Please inspect the safe webhook status endpoint.',502)}
+}
 async function handleTelegramWebhook(request,env,db){
  const expected=String(env.TELEGRAM_WEBHOOK_SECRET||''),supplied=request.headers.get('X-Telegram-Bot-Api-Secret-Token')||'';
  if(!expected){console.error('Telegram webhook rejected: webhook secret is not configured');return fail('Telegram reply webhook is not configured.',503)}
@@ -133,6 +148,7 @@ async function handleRequest({request,env}){
    const stub=env.REALTIME.get(env.REALTIME.idFromName('__global__'));
    return stub.fetch(new Request('https://realtime/connect',request));
   }
+  if(path.length===1&&path[0]==='telegram-resync'&&method==='GET')return await handleTelegramResync(request,env,db);
   if(path.length===1&&path[0]==='telegram-status'&&method==='GET')return await handleTelegramStatus(request,env,db);
   if(path.length===1&&path[0]==='telegram-webhook'&&method==='POST')return await handleTelegramWebhook(request,env,db);
   if(path.length===1&&path[0]==='account'&&method==='GET'){const account=await currentAccount(db,request);return json({account:account?{username:account.username,avatar:account.avatar}:null})}
