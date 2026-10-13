@@ -45,31 +45,65 @@ async function sendCreatorTelegram(db,env,request,id,room,displayName,text){
 function constantTimeEqual(a,b){if(a.length!==b.length)return false;let mismatch=0;for(let i=0;i<a.length;i++)mismatch|=a.charCodeAt(i)^b.charCodeAt(i);return mismatch===0}
 async function sendTelegramNotice(env,chatId,text){if(!env.TELEGRAM_BOT_TOKEN)return;try{await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chat_id:chatId,text})})}catch{}}
 function parseTelegramReply(message,fallbackRoomId=''){const text=String(message?.text||'').trim(),command=text.match(/^\/reply(?:@\w+)?\s+([A-Z0-9]{6})\s+([\s\S]+)$/i);if(command)return {roomId:command[1].toUpperCase(),text:command[2].trim()};if(/^\/reply(?:@\w+)?(?:\s|$)/i.test(text))return {error:'Use /reply ROOMCODE message, or reply directly to a @creator alert.'};const original=message?.reply_to_message;if(original?.text){const match=String(original.text).match(/^@creator mention in [\s\S]*?\(([A-Z0-9]{6})\)\s+From:/i);if(match)return {roomId:match[1].toUpperCase(),text}}if(text.startsWith('/'))return {error:'Use /reply ROOMCODE message, or send plain text after receiving a @creator alert.'};if(fallbackRoomId)return {roomId:fallbackRoomId,text};return {error:'No recent @creator alert was found. Mention @creator in a room first, then reply to its alert or use /reply ROOMCODE message.'}}
+async function recordTelegramDiagnostic(db,env,update,stage,reason=''){
+ try{
+  const message=update?.message||null,stamp=now(),updateId=Number.isInteger(update?.update_id)?update.update_id:null;
+  const updateType=message?'message':Object.keys(update||{}).filter(k=>k!=='update_id').join(',').slice(0,80)||'unknown';
+  const chatMatches=message?Number(String(message.chat?.id)===String(env.TELEGRAM_CHAT_ID)):null;
+  const senderMatches=message?Number(String(message.from?.id)===String(env.TELEGRAM_CREATOR_USER_ID)):null;
+  await db.prepare('INSERT INTO telegram_webhook_diagnostics(created_at,update_id,stage,reason,update_type,chat_matches,sender_matches,text_length,has_reply_to_message) VALUES(?,?,?,?,?,?,?,?,?)').bind(stamp,updateId,stage,String(reason||'').slice(0,180),updateType,chatMatches,senderMatches,String(message?.text||'').length,Number(!!message?.reply_to_message)).run();
+  if(stamp%23<1)await db.prepare('DELETE FROM telegram_webhook_diagnostics WHERE created_at<?').bind(stamp-7*86400000).run();
+ }catch(e){console.error('Telegram diagnostic persistence failed',String(e?.message||e).slice(0,120))}
+}
+async function handleTelegramStatus(request,env,db){
+ const subject=request.headers.get('CF-Connecting-IP')||visitor(request)||'unknown-client';
+ if(!await consumeRateLimit(db,'telegram-status',subject,10,60000))return fail('Please retry this status check later.',429);
+ const expectedUrl=new URL('/api/telegram-webhook',request.url).toString();
+ const config={hasBotToken:!!env.TELEGRAM_BOT_TOKEN,hasWebhookSecret:!!env.TELEGRAM_WEBHOOK_SECRET,hasChatId:!!env.TELEGRAM_CHAT_ID,hasCreatorUserId:!!env.TELEGRAM_CREATOR_USER_ID};
+ let telegram={apiReachable:false};
+ if(env.TELEGRAM_BOT_TOKEN){
+  try{
+   const response=await fetch('https://api.telegram.org/bot'+env.TELEGRAM_BOT_TOKEN+'/getWebhookInfo');
+   const payload=await response.json();
+   if(response.ok&&payload?.ok){
+    const info=payload.result||{};
+    telegram={apiReachable:true,url:info.url||'',urlMatchesExpected:info.url===expectedUrl,pendingUpdateCount:info.pending_update_count??null,lastErrorDate:info.last_error_date??null,lastErrorMessage:String(info.last_error_message||'').slice(0,240)||null,allowedUpdates:info.allowed_updates??null,maxConnections:info.max_connections??null,hasCustomCertificate:!!info.has_custom_certificate};
+   }else telegram={apiReachable:true,apiOk:false,error:String(payload?.description||'Telegram API returned an error').slice(0,180)};
+  }catch{telegram={apiReachable:false,error:'Could not reach Telegram API from the Pages function'};}
+ }
+ const recent=await db.prepare('SELECT created_at,update_id,stage,reason,update_type,chat_matches,sender_matches,text_length,has_reply_to_message FROM telegram_webhook_diagnostics ORDER BY created_at DESC LIMIT 25').all();
+ return json({ok:true,config,telegram,diagnostics:recent.results||[]});
+}
 async function handleTelegramWebhook(request,env,db){
  const expected=String(env.TELEGRAM_WEBHOOK_SECRET||''),supplied=request.headers.get('X-Telegram-Bot-Api-Secret-Token')||'';
  if(!expected){console.error('Telegram webhook rejected: webhook secret is not configured');return fail('Telegram reply webhook is not configured.',503)}
  if(!constantTimeEqual(supplied,expected)){console.warn('Telegram webhook rejected: secret header mismatch');return fail('Webhook authentication failed.',403)}
  if(!env.TELEGRAM_BOT_TOKEN||!env.TELEGRAM_CHAT_ID||!env.TELEGRAM_CREATOR_USER_ID){console.error('Telegram webhook rejected: required setting missing',{hasBotToken:!!env.TELEGRAM_BOT_TOKEN,hasChatId:!!env.TELEGRAM_CHAT_ID,hasCreatorId:!!env.TELEGRAM_CREATOR_USER_ID});return fail('Telegram reply settings are incomplete.',503)}
  let update;try{update=await request.json()}catch{console.warn('Telegram webhook rejected: invalid JSON');return fail('Invalid Telegram update.')}
+ await recordTelegramDiagnostic(db,env,update,'received');
  const message=update?.message;
- if(!Number.isInteger(update?.update_id)||!message){console.log('Telegram webhook ignored: update has no message',{hasUpdateId:Number.isInteger(update?.update_id),hasMessage:!!message,updateType:Object.keys(update||{}).filter(k=>k!=='message')});return json({ok:true})}
- if(message.from?.is_bot){console.log('Telegram webhook ignored: sender is a bot',{updateId:update.update_id});return json({ok:true})}
- if(String(message.chat?.id)!==String(env.TELEGRAM_CHAT_ID)){console.warn('Telegram webhook ignored: chat ID mismatch',{updateId:update.update_id,receivedChatId:String(message.chat?.id||''),configuredChatId:String(env.TELEGRAM_CHAT_ID)});return json({ok:true})}
- if(String(message.from?.id)!==String(env.TELEGRAM_CREATOR_USER_ID)){console.warn('Telegram webhook sender ID mismatch',{updateId:update.update_id,receivedUserId:String(message.from?.id||''),configuredCreatorId:String(env.TELEGRAM_CREATOR_USER_ID)});await sendTelegramNotice(env,message.chat.id,'Husky could not post your reply because TELEGRAM_CREATOR_USER_ID does not match your Telegram numeric user ID. Update that Cloudflare Pages variable, then try again.');return json({ok:true})}
+ if(!Number.isInteger(update?.update_id)||!message){await recordTelegramDiagnostic(db,env,update,'ignored','update_has_no_message');return json({ok:true})}
+ if(message.from?.is_bot){await recordTelegramDiagnostic(db,env,update,'ignored','sender_is_bot');return json({ok:true})}
+ if(String(message.chat?.id)!==String(env.TELEGRAM_CHAT_ID)){await recordTelegramDiagnostic(db,env,update,'ignored','chat_id_mismatch');console.warn('Telegram webhook ignored: chat ID mismatch',{updateId:update.update_id});return json({ok:true})}
+ if(String(message.from?.id)!==String(env.TELEGRAM_CREATOR_USER_ID)){await recordTelegramDiagnostic(db,env,update,'rejected','sender_id_mismatch');console.warn('Telegram webhook sender ID mismatch',{updateId:update.update_id});await sendTelegramNotice(env,message.chat.id,'Husky could not post your reply because TELEGRAM_CREATOR_USER_ID does not match your Telegram numeric user ID. Update that Cloudflare Pages variable, then try again.');return json({ok:true})}
  const text=String(message.text||'').trim();
- if(!text){console.log('Telegram webhook ignored: message has no text',{updateId:update.update_id,hasPhoto:!!message.photo,hasCaption:!!message.caption});return json({ok:true})}
+ if(!text){await recordTelegramDiagnostic(db,env,update,'ignored','message_has_no_text');console.log('Telegram webhook ignored: message has no text',{updateId:update.update_id});return json({ok:true})}
  let fallbackRoomId='';
  if(!text.startsWith('/')&&!message.reply_to_message){const recent=await db.prepare("SELECT a.room_id AS id FROM activity a JOIN rooms r ON r.id=a.room_id WHERE a.text='@creator Telegram alert sent' AND a.created_at>? AND r.expires_at>? ORDER BY a.created_at DESC LIMIT 1").bind(now()-86400000,now()).first();fallbackRoomId=recent?.id||''}
  const reply=parseTelegramReply(message,fallbackRoomId);
- if(reply.error){console.warn('Telegram webhook could not route reply',{updateId:update.update_id,reason:reply.error,hasReplyToMessage:!!message.reply_to_message,hasFallbackRoom:!!fallbackRoomId});await sendTelegramNotice(env,message.chat.id,reply.error);return json({ok:true})}
+ if(reply.error){await recordTelegramDiagnostic(db,env,update,'routing_error',reply.error);console.warn('Telegram webhook could not route reply',{updateId:update.update_id,hasReplyToMessage:!!message.reply_to_message,hasFallbackRoom:!!fallbackRoomId});await sendTelegramNotice(env,message.chat.id,reply.error);return json({ok:true})}
  if(!reply.text)return json({ok:true});
- if(reply.text.length>255){console.warn('Telegram reply exceeds message limit',{updateId:update.update_id,length:reply.text.length});await sendTelegramNotice(env,message.chat.id,'That reply is over Husky’s 255-character limit and was not posted.');return json({ok:true})}
+ if(reply.text.length>255){await recordTelegramDiagnostic(db,env,update,'rejected','text_over_255_characters');await sendTelegramNotice(env,message.chat.id,'That reply is over Husky’s 255-character limit and was not posted.');return json({ok:true})}
  const room=await db.prepare('SELECT id FROM rooms WHERE id=? AND expires_at>?').bind(reply.roomId,now()).first();
- if(!room){console.warn('Telegram reply room missing or expired',{updateId:update.update_id,roomId:reply.roomId});await sendTelegramNotice(env,message.chat.id,`Room ${reply.roomId} was not found or has expired. Send /reply ROOMCODE your message to choose a room explicitly.`);return json({ok:true})}
+ if(!room){await recordTelegramDiagnostic(db,env,update,'routing_error','room_missing:'+reply.roomId);console.warn('Telegram reply room missing or expired',{updateId:update.update_id,roomId:reply.roomId});await sendTelegramNotice(env,message.chat.id,`Room ${reply.roomId} was not found or has expired. Send /reply ROOMCODE your message to choose a room explicitly.`);return json({ok:true})}
  const timestamp=now(),senderId=`telegram:${message.from.id}`,displayName='Husky Creator (Telegram)',body=reply.text;
  await db.prepare('DELETE FROM telegram_updates WHERE created_at<?').bind(timestamp-90*86400000).run();
- const result=await db.batch([db.prepare('INSERT OR IGNORE INTO telegram_updates(update_id,created_at) VALUES(?,?)').bind(update.update_id,timestamp),db.prepare("INSERT INTO messages(room_id,sender_id,display_name,kind,text,gif_url,created_at) SELECT ?,?,?,'text',?,'',? WHERE changes()=1").bind(room.id,senderId,displayName,body,timestamp),db.prepare('INSERT INTO activity(room_id,text,created_at) SELECT ?,?,? WHERE changes()=1').bind(room.id,'Husky Creator replied via Telegram',timestamp)]);
- if(!result?.[1]?.meta?.changes){console.warn('Telegram reply was not inserted into messages',{updateId:update.update_id,roomId:reply.roomId,duplicate:!!result?.[0]?.meta?.changes===false});return json({ok:true,duplicate:true})}
+ let result;
+ try{
+  result=await db.batch([db.prepare('INSERT OR IGNORE INTO telegram_updates(update_id,created_at) VALUES(?,?)').bind(update.update_id,timestamp),db.prepare("INSERT INTO messages(room_id,sender_id,display_name,kind,text,gif_url,created_at) SELECT ?,?,?,'text',?,'',? WHERE changes()=1").bind(room.id,senderId,displayName,body,timestamp),db.prepare('INSERT INTO activity(room_id,text,created_at) SELECT ?,?,? WHERE changes()=1').bind(room.id,'Husky Creator replied via Telegram',timestamp)]);
+ }catch(e){await recordTelegramDiagnostic(db,env,update,'d1_insert_failed',String(e?.message||e).replace(/[\r\n]+/g,' ').slice(0,170));console.error('Telegram reply D1 insert failed',{updateId:update.update_id,error:String(e?.message||e).slice(0,120)});await sendTelegramNotice(env,message.chat.id,'Husky could not save your reply due to a database error. Please retry.');return fail('Telegram reply could not be saved.',500)}
+ if(!result?.[1]?.meta?.changes){await recordTelegramDiagnostic(db,env,update,'duplicate_or_not_inserted',Number(result?.[0]?.meta?.changes||0)===0?'duplicate_update_id':'message_insert_not_applied');console.warn('Telegram reply was not inserted into messages',{updateId:update.update_id,roomId:reply.roomId,updateWasDuplicate:Number(result?.[0]?.meta?.changes||0)===0});return json({ok:true,duplicate:true})}
+ await recordTelegramDiagnostic(db,env,update,'inserted','room:'+reply.roomId);
  console.log('Telegram reply inserted into room',{updateId:update.update_id,roomId:reply.roomId});
  await sendTelegramNotice(env,message.chat.id,`Sent to ${reply.roomId}.`);
  return json({ok:true})
@@ -99,6 +133,7 @@ async function handleRequest({request,env}){
    const stub=env.REALTIME.get(env.REALTIME.idFromName('__global__'));
    return stub.fetch(new Request('https://realtime/connect',request));
   }
+  if(path.length===1&&path[0]==='telegram-status'&&method==='GET')return await handleTelegramStatus(request,env,db);
   if(path.length===1&&path[0]==='telegram-webhook'&&method==='POST')return await handleTelegramWebhook(request,env,db);
   if(path.length===1&&path[0]==='account'&&method==='GET'){const account=await currentAccount(db,request);return json({account:account?{username:account.username,avatar:account.avatar}:null})}
   if(path.length===2&&path[0]==='account'&&['signup','login'].includes(path[1])&&method==='POST'){
